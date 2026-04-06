@@ -10,9 +10,11 @@ interface ProjectNodeProps {
   isPinned: boolean
   onTogglePin: () => void
   activeSessionId: string | null
+  activeSubAgentId: string | null
   compareSelections: Set<string>
   compareMode: boolean
   onSelectSession: (sessionId: string) => void
+  onSelectSubAgent: (parentSessionId: string, childSessionId: string) => void
   onCompareToggle: (sessionId: string) => void
   onDeleteSession: (sessionId: string) => void
   onMoveSession?: (sessionId: string, sessionTitle: string) => void
@@ -22,8 +24,8 @@ interface ProjectNodeProps {
 
 export function ProjectNode({
   rootId, project, isPinned, onTogglePin,
-  activeSessionId, compareSelections, compareMode,
-  onSelectSession, onCompareToggle, onDeleteSession,
+  activeSessionId, activeSubAgentId, compareSelections, compareMode,
+  onSelectSession, onSelectSubAgent, onCompareToggle, onDeleteSession,
   onMoveSession, onMoveProject, refreshTrigger,
 }: ProjectNodeProps) {
   const [expanded, setExpanded] = useState(false)
@@ -117,8 +119,9 @@ export function ProjectNode({
               isCompareSelected={compareSelections.has(session.id)}
               compareMode={compareMode}
               activeSessionId={activeSessionId}
+              activeSubAgentId={activeSubAgentId}
               onSelect={() => onSelectSession(session.id)}
-              onSelectChild={(childId) => onSelectSession(childId)}
+              onSelectChild={(childId) => onSelectSubAgent(session.id, childId)}
               onCompareToggle={() => onCompareToggle(session.id)}
               onMove={onMoveSession ? () => {
                 const title = session.customTitle ?? session.firstPrompt ?? 'Untitled'
@@ -127,10 +130,6 @@ export function ProjectNode({
               onDelete={() => {
                 onDeleteSession(session.id)
                 setSessions(prev => prev.filter(s => s.id !== session.id))
-              }}
-              onDeleteChild={(childId) => {
-                onDeleteSession(childId)
-                setSessions(prev => prev.filter(s => s.id !== childId))
               }}
               compareSelections={compareSelections}
             />

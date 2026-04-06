@@ -1,4 +1,4 @@
-import { readdir, open as fsOpen, stat as fsStat } from 'fs/promises'
+import { readdir, readFile, open as fsOpen, stat as fsStat } from 'fs/promises'
 import { join } from 'path'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -303,6 +303,31 @@ export async function listSessions(rootPath: string, projectId: string): Promise
   const uuidFiles = allFiles.filter(f => UUID_RE.test(f.replace('.jsonl', '')))
   const agentFiles = allFiles.filter(f => AGENT_FILE_RE.test(f))
 
+  // Also discover agent files inside companion folders: {sessionId}/subagents/agent-*.jsonl
+  const companionAgentFiles: Array<{ file: string; filePath: string; metaDescription?: string }> = []
+  await Promise.all(uuidFiles.map(async (f) => {
+    const sessionId = f.replace('.jsonl', '')
+    const subagentsDir = join(projDir, sessionId, 'subagents')
+    try {
+      const entries = await readdir(subagentsDir)
+      for (const entry of entries) {
+        if (AGENT_FILE_RE.test(entry)) {
+          const item: { file: string; filePath: string; metaDescription?: string } = {
+            file: entry,
+            filePath: join(subagentsDir, entry),
+          }
+          // Try to read companion .meta.json for accurate description
+          try {
+            const metaPath = join(subagentsDir, entry.replace('.jsonl', '.meta.json'))
+            const metaJson = JSON.parse(await readFile(metaPath, 'utf-8'))
+            if (metaJson.description) item.metaDescription = metaJson.description
+          } catch { /* no meta file */ }
+          companionAgentFiles.push(item)
+        }
+      }
+    } catch { /* no companion folder */ }
+  }))
+
   // Parse all sessions (parent + agent) in parallel
   const parentSessions: SessionInfo[] = []
   const agentSessions: SessionInfo[] = []
@@ -362,9 +387,13 @@ export async function listSessions(rootPath: string, projectId: string): Promise
     })
   }))
 
-  // Parse agent sessions
-  await Promise.all(agentFiles.map(async (file) => {
-    const filePath = join(projDir, file)
+  // Parse agent sessions (from both project root and companion subagents/ folders)
+  const allAgentEntries: Array<{ file: string; filePath: string; metaDescription?: string }> = [
+    ...agentFiles.map(f => ({ file: f, filePath: join(projDir, f) })),
+    ...companionAgentFiles,
+  ]
+
+  await Promise.all(allAgentEntries.map(async ({ file, filePath, metaDescription }) => {
     const data = await readHeadAndTail(filePath)
     if (!data) return
 
@@ -401,7 +430,7 @@ export async function listSessions(rootPath: string, projectId: string): Promise
       fileSize: data.fileSize,
       isSubAgent: true,
       agentId,
-      agentDescription: meta.subagentType ?? null,
+      agentDescription: metaDescription ?? meta.subagentType ?? null,
       parentSessionId,
       childSessionIds: [],
     }

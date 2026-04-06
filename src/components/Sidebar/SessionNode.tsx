@@ -8,11 +8,11 @@ interface SessionNodeProps {
   isCompareSelected: boolean
   compareMode: boolean
   activeSessionId: string | null
+  activeSubAgentId: string | null
   onSelect: () => void
   onSelectChild: (childId: string) => void
   onCompareToggle: () => void
   onDelete: () => void
-  onDeleteChild: (childId: string) => void
   onMove?: () => void
   compareSelections: Set<string>
 }
@@ -42,7 +42,7 @@ function SessionRow({
   compareMode: boolean
   onSelect: () => void
   onCompareToggle: () => void
-  onDelete: () => void
+  onDelete?: () => void
   onMove?: () => void
   isChild?: boolean
 }) {
@@ -52,6 +52,7 @@ function SessionRow({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
+    if (!onDelete) return
     if (confirmDelete) {
       onDelete()
       setConfirmDelete(false)
@@ -92,13 +93,15 @@ function SessionRow({
           <span className="meta-item">{formatSize(session.fileSize)}</span>
         </div>
       </div>
-      {confirmDelete ? (
-        <div className="session-delete-confirm">
-          <button className="delete-confirm-btn" onClick={handleDelete} title="Confirm delete">Delete</button>
-          <button className="delete-cancel-btn" onClick={handleCancelDelete} title="Cancel">Cancel</button>
-        </div>
-      ) : (
-        <button className="session-delete-btn" onClick={handleDelete} title="Delete session">&times;</button>
+      {onDelete && (
+        confirmDelete ? (
+          <div className="session-delete-confirm">
+            <button className="delete-confirm-btn" onClick={handleDelete} title="Confirm delete">Delete</button>
+            <button className="delete-cancel-btn" onClick={handleCancelDelete} title="Cancel">Cancel</button>
+          </div>
+        ) : (
+          <button className="session-delete-btn" onClick={handleDelete} title="Delete session">&times;</button>
+        )
       )}
     </div>
   )
@@ -106,8 +109,8 @@ function SessionRow({
 
 export function SessionNode({
   session, childSessions, isActive, isCompareSelected, compareMode,
-  activeSessionId, onSelect, onSelectChild, onCompareToggle,
-  onDelete, onDeleteChild, onMove, compareSelections,
+  activeSessionId, activeSubAgentId, onSelect, onSelectChild, onCompareToggle,
+  onDelete, onMove, compareSelections,
 }: SessionNodeProps) {
   const [childrenExpanded, setChildrenExpanded] = useState(false)
   const hasChildren = childSessions.length > 0
@@ -142,12 +145,11 @@ export function SessionNode({
             <SessionRow
               key={child.id}
               session={child}
-              isActive={child.id === activeSessionId}
+              isActive={child.id === activeSubAgentId}
               isCompareSelected={compareSelections.has(child.id)}
               compareMode={compareMode}
               onSelect={() => onSelectChild(child.id)}
               onCompareToggle={() => {}}
-              onDelete={() => onDeleteChild(child.id)}
               isChild
             />
           ))}

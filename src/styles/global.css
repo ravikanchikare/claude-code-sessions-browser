@@ -529,6 +529,75 @@ input:focus {
   flex-direction: column;
 }
 
+/* Viewer container: splits into main + sub-agent columns */
+.viewer-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.viewer-body-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.viewer-body-main-split {
+  border-right: 1px solid var(--border);
+}
+
+.viewer-body-sub {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.subagent-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.subagent-panel-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subagent-close-btn {
+  font-size: 18px;
+  color: var(--text-muted);
+  padding: 0 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color 0.15s;
+}
+
+.subagent-close-btn:hover {
+  color: var(--text-bright);
+}
+
+/* Clickable agent prompt blocks */
+.agent-prompt-clickable {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.agent-prompt-clickable:hover {
+  background: rgba(76, 110, 245, 0.12);
+}
+
 .viewer-empty {
   display: flex;
   align-items: center;
@@ -571,13 +640,50 @@ input:focus {
   gap: 6px;
 }
 
+.viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.view-toggle {
+  display: flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.view-toggle-btn {
+  padding: 4px 12px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: background 0.15s, color 0.15s;
+  border: none;
+  cursor: pointer;
+}
+
+.view-toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.view-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-bright);
+}
+
+.view-toggle-btn.active {
+  background: var(--accent);
+  color: var(--text-bright);
+}
+
 .export-btn {
   padding: 4px 12px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 12px;
-  margin-top: 8px;
   transition: background 0.15s;
 }
 
@@ -754,6 +860,120 @@ input:focus {
   margin-top: 4px;
   max-height: 200px;
   overflow-y: auto;
+}
+
+/* Inline agent prompts */
+.agent-prompt-inline {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(76, 110, 245, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+.agent-prompt-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.agent-type-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: rgba(76, 110, 245, 0.15);
+  border-radius: 3px;
+  color: var(--text-accent);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.agent-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.agent-prompt-text {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 4px 0 6px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Tool name labels in toggle buttons */
+.tool-name-label {
+  font-weight: 600;
+  color: var(--text-accent);
+  margin-right: 4px;
+}
+
+.tool-summary {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.tool-calls-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-call-item {
+  padding: 2px 0;
+}
+
+.toggle-btn-small {
+  font-size: 10.5px;
+}
+
+/* Grouped tool call pills */
+.tool-call-group {
+  margin: 4px 0;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
+.tool-call-group-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.tool-pill {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-call-group-details {
+  margin-top: 6px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 6px;
+}
+
+.tool-call-detail {
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
 }
 
 /* ---------------------------------------------------------------------------

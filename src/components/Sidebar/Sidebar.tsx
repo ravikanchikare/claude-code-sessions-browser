@@ -9,9 +9,11 @@ interface SidebarProps {
   activeRootId: string | null
   activeProjectId: string | null
   activeSessionId: string | null
+  activeSubAgentId: string | null
   compareSelections: Set<string>
   compareMode: boolean
   onSelectSession: (rootId: string, projectId: string, sessionId: string) => void
+  onSelectSubAgent: (rootId: string, projectId: string, parentSessionId: string, childSessionId: string) => void
   onCompareToggle: (sessionId: string) => void
   onToggleCompareMode: () => void
   onDeleteSession: (rootId: string, projectId: string, sessionId: string) => void
@@ -24,9 +26,9 @@ interface SidebarProps {
 
 export function Sidebar({
   roots, isPinned, onTogglePin,
-  activeRootId, activeProjectId, activeSessionId,
+  activeRootId, activeProjectId, activeSessionId, activeSubAgentId,
   compareSelections, compareMode,
-  onSelectSession, onCompareToggle, onToggleCompareMode,
+  onSelectSession, onSelectSubAgent, onCompareToggle, onToggleCompareMode,
   onDeleteSession, onAddRoot, onRemoveRoot,
   onMoveSession, onMoveProject, refreshTrigger,
 }: SidebarProps) {
@@ -88,10 +90,12 @@ export function Sidebar({
             isPinned={(projectId) => isPinned(root.id, projectId)}
             onTogglePin={(projectId) => onTogglePin(root.id, projectId)}
             activeSessionId={activeRootId === root.id ? activeSessionId : null}
+            activeSubAgentId={activeRootId === root.id ? activeSubAgentId : null}
             activeProjectId={activeRootId === root.id ? activeProjectId : null}
             compareSelections={compareSelections}
             compareMode={compareMode}
             onSelectSession={(projectId, sessionId) => onSelectSession(root.id, projectId, sessionId)}
+            onSelectSubAgent={(projectId, parentSessionId, childSessionId) => onSelectSubAgent(root.id, projectId, parentSessionId, childSessionId)}
             onCompareToggle={onCompareToggle}
             onDeleteSession={(projectId, sessionId) => onDeleteSession(root.id, projectId, sessionId)}
             onRemoveRoot={() => onRemoveRoot(root.id)}

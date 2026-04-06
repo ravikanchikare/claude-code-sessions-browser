@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Sidebar } from './components/Sidebar/Sidebar.js'
 import { ConversationViewer } from './components/Viewer/ConversationViewer.js'
 import { CompareView } from './components/Comparator/CompareView.js'
@@ -8,16 +8,19 @@ import { useRoots } from './hooks/useRoots.js'
 import { useMessages } from './hooks/useMessages.js'
 import { usePinnedProjects } from './hooks/usePinnedProjects.js'
 import * as api from './api.js'
-import type { CompareSelection } from './types.js'
+import type { CompareSelection, SessionInfo } from './types.js'
 
 export function App() {
   const { roots, addRoot, removeRoot } = useRoots()
   const { conversation, loading, error, load, clear } = useMessages()
+  const { conversation: subConversation, loading: subLoading, error: subError, load: subLoad, clear: subClear } = useMessages()
   const { isPinned, togglePin } = usePinnedProjects()
 
   const [activeRootId, setActiveRootId] = useState<string | null>(null)
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [activeSubAgentId, setActiveSubAgentId] = useState<string | null>(null)
+  const [childSessions, setChildSessions] = useState<SessionInfo[]>([])
 
   const [compareMode, setCompareMode] = useState(false)
   const [compareSelections, setCompareSelections] = useState<CompareSelection[]>([])
@@ -32,14 +35,55 @@ export function App() {
     itemTitle: string
   } | null>(null)
 
+  // Fetch child sessions when active session changes
+  useEffect(() => {
+    if (!activeRootId || !activeProjectId || !activeSessionId) {
+      setChildSessions([])
+      return
+    }
+    api.getSessions(activeRootId, activeProjectId).then(sessions => {
+      const parent = sessions.find(s => s.id === activeSessionId)
+      if (parent?.childSessionIds?.length) {
+        const children = sessions.filter(s => parent.childSessionIds.includes(s.id))
+        setChildSessions(children)
+      } else {
+        setChildSessions([])
+      }
+    }).catch(() => setChildSessions([]))
+  }, [activeRootId, activeProjectId, activeSessionId])
+
   const handleSelectSession = useCallback((rootId: string, projectId: string, sessionId: string) => {
     setActiveRootId(rootId)
     setActiveProjectId(projectId)
     setActiveSessionId(sessionId)
+    setActiveSubAgentId(null)
+    subClear()
     if (!compareMode) {
       load(rootId, projectId, sessionId)
     }
-  }, [compareMode, load])
+  }, [compareMode, load, subClear])
+
+  const handleSelectSubAgent = useCallback((rootId: string, projectId: string, parentSessionId: string, childSessionId: string) => {
+    if (activeSessionId !== parentSessionId) {
+      setActiveRootId(rootId)
+      setActiveProjectId(projectId)
+      setActiveSessionId(parentSessionId)
+      load(rootId, projectId, parentSessionId)
+    }
+    setActiveSubAgentId(childSessionId)
+    subLoad(rootId, projectId, childSessionId)
+  }, [activeSessionId, load, subLoad])
+
+  const handleSelectSubAgentById = useCallback((childSessionId: string) => {
+    if (!activeRootId || !activeProjectId || !activeSessionId) return
+    setActiveSubAgentId(childSessionId)
+    subLoad(activeRootId, activeProjectId, childSessionId)
+  }, [activeRootId, activeProjectId, activeSessionId, subLoad])
+
+  const handleCloseSubAgent = useCallback(() => {
+    setActiveSubAgentId(null)
+    subClear()
+  }, [subClear])
 
   const compareSessionIds = new Set(compareSelections.map(s => s.sessionId))
 
@@ -49,7 +93,7 @@ export function App() {
       if (existing) {
         return prev.filter(s => s.sessionId !== sessionId)
       }
-      if (prev.length >= 3) return prev // max 3
+      if (prev.length >= 3) return prev
       if (!activeRootId || !activeProjectId) return prev
       return [...prev, { rootId: activeRootId, projectId: activeProjectId, sessionId }]
     })
@@ -73,14 +117,15 @@ export function App() {
       await api.deleteSession(rootId, projectId, sessionId)
       if (activeSessionId === sessionId) {
         setActiveSessionId(null)
+        setActiveSubAgentId(null)
         clear()
+        subClear()
       }
       setCompareSelections(prev => prev.filter(s => s.sessionId !== sessionId))
     } catch {
-      // deletion failed silently — the ProjectNode already removed it from its local list,
-      // but the file still exists; a refresh will restore it
+      // deletion failed silently
     }
-  }, [activeSessionId, clear])
+  }, [activeSessionId, clear, subClear])
 
   const handleMoveSession = useCallback((rootId: string, projectId: string, sessionId: string, sessionTitle: string) => {
     setMoveDialog({ mode: 'session', rootId, projectId, sessionId, itemTitle: sessionTitle })
@@ -96,18 +141,22 @@ export function App() {
       await api.moveSession(moveDialog.rootId, moveDialog.projectId, moveDialog.sessionId, target.targetProjectId)
       if (activeSessionId === moveDialog.sessionId) {
         setActiveSessionId(null)
+        setActiveSubAgentId(null)
         clear()
+        subClear()
       }
     } else if (moveDialog.mode === 'project' && target.targetRootId) {
       await api.moveProject(moveDialog.rootId, moveDialog.projectId, target.targetRootId)
       if (activeProjectId === moveDialog.projectId) {
         setActiveSessionId(null)
         setActiveProjectId(null)
+        setActiveSubAgentId(null)
         clear()
+        subClear()
       }
     }
     setRefreshTrigger(prev => prev + 1)
-  }, [moveDialog, activeSessionId, activeProjectId, clear])
+  }, [moveDialog, activeSessionId, activeProjectId, clear, subClear])
 
   return (
     <div className="app">
@@ -118,9 +167,11 @@ export function App() {
         activeRootId={activeRootId}
         activeProjectId={activeProjectId}
         activeSessionId={activeSessionId}
+        activeSubAgentId={activeSubAgentId}
         compareSelections={compareSessionIds}
         compareMode={compareMode}
         onSelectSession={handleSelectSession}
+        onSelectSubAgent={handleSelectSubAgent}
         onCompareToggle={handleCompareToggle}
         onToggleCompareMode={handleToggleCompareMode}
         onDeleteSession={handleDeleteSession}
@@ -144,6 +195,13 @@ export function App() {
             loading={loading}
             error={error}
             onExport={conversation ? () => setShowExport(true) : undefined}
+            childSessions={childSessions}
+            activeSubAgentId={activeSubAgentId}
+            subConversation={subConversation}
+            subLoading={subLoading}
+            subError={subError}
+            onSelectSubAgent={handleSelectSubAgentById}
+            onCloseSubAgent={handleCloseSubAgent}
           />
         )}
       </main>

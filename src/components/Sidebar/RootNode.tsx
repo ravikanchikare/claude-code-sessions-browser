@@ -8,10 +8,12 @@ interface RootNodeProps {
   isPinned: (projectId: string) => boolean
   onTogglePin: (projectId: string) => void
   activeSessionId: string | null
+  activeSubAgentId: string | null
   activeProjectId: string | null
   compareSelections: Set<string>
   compareMode: boolean
   onSelectSession: (projectId: string, sessionId: string) => void
+  onSelectSubAgent: (projectId: string, parentSessionId: string, childSessionId: string) => void
   onCompareToggle: (sessionId: string) => void
   onDeleteSession: (projectId: string, sessionId: string) => void
   onRemoveRoot: () => void
@@ -22,8 +24,8 @@ interface RootNodeProps {
 
 export function RootNode({
   root, isPinned, onTogglePin,
-  activeSessionId, activeProjectId, compareSelections, compareMode,
-  onSelectSession, onCompareToggle, onDeleteSession, onRemoveRoot,
+  activeSessionId, activeSubAgentId, activeProjectId, compareSelections, compareMode,
+  onSelectSession, onSelectSubAgent, onCompareToggle, onDeleteSession, onRemoveRoot,
   onMoveSession, onMoveProject, refreshTrigger,
 }: RootNodeProps) {
   const [expanded, setExpanded] = useState(true)
@@ -72,9 +74,11 @@ export function RootNode({
               isPinned={isPinned(project.id)}
               onTogglePin={() => onTogglePin(project.id)}
               activeSessionId={activeProjectId === project.id ? activeSessionId : null}
+              activeSubAgentId={activeProjectId === project.id ? activeSubAgentId : null}
               compareSelections={compareSelections}
               compareMode={compareMode}
               onSelectSession={(sessionId) => onSelectSession(project.id, sessionId)}
+              onSelectSubAgent={(parentSessionId, childSessionId) => onSelectSubAgent(project.id, parentSessionId, childSessionId)}
               onCompareToggle={onCompareToggle}
               onDeleteSession={(sessionId) => onDeleteSession(project.id, sessionId)}
               onMoveSession={onMoveSession ? (sessionId, sessionTitle) => onMoveSession(project.id, sessionId, sessionTitle) : undefined}
