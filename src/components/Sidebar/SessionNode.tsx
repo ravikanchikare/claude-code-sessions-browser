@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import type { SessionInfo } from '../../types.js'
+import { SessionContextMenu } from './SessionContextMenu.js'
 
 interface SessionNodeProps {
   session: SessionInfo
@@ -14,6 +15,7 @@ interface SessionNodeProps {
   onCompareToggle: () => void
   onDelete: () => void
   onMove?: () => void
+  onRename?: () => void
   compareSelections: Set<string>
 }
 
@@ -33,7 +35,7 @@ function formatSize(bytes: number): string {
 
 function SessionRow({
   session, isActive, isCompareSelected, compareMode,
-  onSelect, onCompareToggle, onDelete, onMove,
+  onSelect, onCompareToggle, onDelete, onMove, onRename,
   isChild,
 }: {
   session: SessionInfo
@@ -44,40 +46,19 @@ function SessionRow({
   onCompareToggle: () => void
   onDelete?: () => void
   onMove?: () => void
+  onRename?: () => void
   isChild?: boolean
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const title = session.customTitle ?? session.firstPrompt ?? 'Untitled'
   const displayTitle = title.length > 80 ? title.slice(0, 80) + '\u2026' : title
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!onDelete) return
-    if (confirmDelete) {
-      onDelete()
-      setConfirmDelete(false)
-    } else {
-      setConfirmDelete(true)
-    }
-  }
-
-  const handleCancelDelete = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setConfirmDelete(false)
-  }
-
   return (
     <div className={`session-node ${isActive ? 'active' : ''} ${isCompareSelected ? 'compare-selected' : ''} ${isChild ? 'session-child' : ''}`}>
-      {onMove && !isChild && (
-        <button className="session-move-btn" onClick={(e) => { e.stopPropagation(); onMove() }} title="Move session">&#x21c4;</button>
-      )}
       {compareMode && (
-        <input
-          type="checkbox"
-          checked={isCompareSelected}
-          onChange={onCompareToggle}
-          className="compare-checkbox"
-        />
+        <span className="compare-checkbox" onClick={(e) => { e.stopPropagation(); onCompareToggle() }}>
+          {isCompareSelected ? '\u2611' : '\u2610'}
+        </span>
       )}
       <div className="session-content" onClick={onSelect}>
         {isChild && (
@@ -93,15 +74,25 @@ function SessionRow({
           <span className="meta-item">{formatSize(session.fileSize)}</span>
         </div>
       </div>
-      {onDelete && (
-        confirmDelete ? (
-          <div className="session-delete-confirm">
-            <button className="delete-confirm-btn" onClick={handleDelete} title="Confirm delete">Delete</button>
-            <button className="delete-cancel-btn" onClick={handleCancelDelete} title="Cancel">Cancel</button>
-          </div>
-        ) : (
-          <button className="session-delete-btn" onClick={handleDelete} title="Delete session">&times;</button>
-        )
+      {onDelete && !isChild && (
+        <div className="session-menu-wrapper">
+          <button
+            className="session-menu-btn"
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
+            title="Session actions"
+          >&#8942;</button>
+          {menuOpen && (
+            <SessionContextMenu
+              onRename={onRename}
+              onMove={onMove}
+              onDelete={onDelete}
+              compareMode={compareMode}
+              isCompareSelected={isCompareSelected}
+              onCompareToggle={onCompareToggle}
+              onClose={() => setMenuOpen(false)}
+            />
+          )}
+        </div>
       )}
     </div>
   )
@@ -110,7 +101,7 @@ function SessionRow({
 export function SessionNode({
   session, childSessions, isActive, isCompareSelected, compareMode,
   activeSessionId, activeSubAgentId, onSelect, onSelectChild, onCompareToggle,
-  onDelete, onMove, compareSelections,
+  onDelete, onMove, onRename, compareSelections,
 }: SessionNodeProps) {
   const [childrenExpanded, setChildrenExpanded] = useState(false)
   const hasChildren = childSessions.length > 0
@@ -127,6 +118,7 @@ export function SessionNode({
           onCompareToggle={onCompareToggle}
           onDelete={onDelete}
           onMove={onMove}
+          onRename={onRename}
         />
         {hasChildren && (
           <button

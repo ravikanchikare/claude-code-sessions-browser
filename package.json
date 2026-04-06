@@ -4,16 +4,31 @@
   "description": "Browse, compare, and export Claude Code conversation logs",
   "type": "module",
   "bin": {
-    "claude-session-browser": "./bin/cli.js"
+    "claude-session-browser": "./build/bin/cli.js"
   },
   "scripts": {
     "dev": "tsx bin/cli.ts",
-    "build": "vite build",
-    "start": "node bin/cli.js"
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "start": "node build/bin/cli.js",
+    "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist",
+    "build",
+    "README.md"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "session",
+    "browser",
+    "conversation",
+    "viewer"
+  ],
+  "license": "MIT",
   "dependencies": {
     "express": "^4.21.0",
     "marked": "^15.0.0",

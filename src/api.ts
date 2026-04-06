@@ -66,6 +66,43 @@ export async function moveProject(rootId: string, projectId: string, targetRootI
   }
 }
 
+export async function renameSession(rootId: string, projectId: string, sessionId: string, title: string): Promise<void> {
+  const res = await fetch(`${BASE}/roots/${encodeURIComponent(rootId)}/projects/${encodeURIComponent(projectId)}/sessions/${sessionId}/rename`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to rename session')
+  }
+}
+
+export async function rewindSession(rootId: string, projectId: string, sessionId: string, targetMessageUuid: string): Promise<void> {
+  const res = await fetch(`${BASE}/roots/${encodeURIComponent(rootId)}/projects/${encodeURIComponent(projectId)}/sessions/${sessionId}/rewind`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetMessageUuid }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to rewind session')
+  }
+}
+
+export async function branchSession(rootId: string, projectId: string, sessionId: string, targetMessageUuid: string): Promise<{ newSessionId: string; title: string }> {
+  const res = await fetch(`${BASE}/roots/${encodeURIComponent(rootId)}/projects/${encodeURIComponent(projectId)}/sessions/${sessionId}/branch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetMessageUuid }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to branch session')
+  }
+  return res.json() as Promise<{ newSessionId: string; title: string }>
+}
+
 export async function exportSessions(rootId: string, projectId?: string, sessionIds?: string[], format: 'markdown' | 'json' = 'markdown'): Promise<Blob> {
   const res = await fetch(`${BASE}/export`, {
     method: 'POST',

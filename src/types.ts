@@ -47,6 +47,8 @@ export interface NormalizedMessage {
     cacheReadTokens?: number
   }
   stopReason?: string | null
+  parentUuid?: string | null
+  messageIndex?: number
 }
 
 export interface ParsedConversation {

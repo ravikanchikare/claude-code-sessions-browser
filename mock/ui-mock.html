@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Session Browser — UI Mock</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   CSS Variables — same dark theme as the real app
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg-primary: #1a1b1e;
+  --bg-secondary: #25262b;
+  --bg-tertiary: #2c2e33;
+  --border: #373a40;
+  --border-light: #4a4d54;
+  --text-primary: #c1c2c5;
+  --text-bright: #e4e5e7;
+  --text-muted: #5c5f66;
+  --text-accent: #748ffc;
+  --accent: #4c6ef5;
+  --danger: #ff6b6b;
+  --pin-color: #ffd43b;
+  --user-bg: #1e3a5f;
+  --user-border: #2b5ea2;
+  --assistant-bg: #1e3523;
+  --assistant-border: #2d6a3e;
+  --system-bg: #2c2e33;
+  --sidebar-width: 340px;
+  --control-bar-height: 48px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   App Layout
+   ═══════════════════════════════════════════════════════════════ */
+.app {
+  display: flex;
+  height: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR — Resizable
+   ═══════════════════════════════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: 200px;
+  max-width: 600px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.sidebar-actions {
+  display: flex;
+  gap: 6px;
+}
+.sidebar-actions button {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sidebar-actions button:hover { color: var(--text-accent); border-color: var(--text-accent); }
+
+.sidebar-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+/* ── Resize Handle ── */
+.resize-handle {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  position: relative;
+}
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--accent);
+}
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 30px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.resize-handle:hover::after { opacity: 1; }
+
+/* ── Root / Project Nodes ── */
+.root-node { margin-bottom: 2px; }
+.root-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.root-header:hover { background: var(--bg-tertiary); }
+.expand-icon {
+  font-size: 10px;
+  width: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px 5px 28px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.project-header:hover { background: var(--bg-tertiary); }
+.project-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-count {
+  background: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Session Nodes with ⋮ Menu ── */
+.session-node {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 12px 6px 44px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.1s;
+}
+.session-node:hover { background: var(--bg-tertiary); }
+.session-node.active {
+  background: var(--bg-tertiary);
+  border-left: 2px solid var(--accent);
+  padding-left: 42px;
+}
+
+.session-content {
+  flex: 1;
+  min-width: 0;
+}
+.session-title {
+  font-size: 12px;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.session-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.meta-item.branch { color: var(--text-accent); }
+
+/* ── Three-Dot Menu Button ── */
+.session-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s;
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+.session-node:hover .session-menu-btn { opacity: 1; }
+.session-menu-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-bright);
+}
+
+/* ── Context Menu Dropdown ── */
+.context-menu {
+  position: absolute;
+  right: 8px;
+  top: 100%;
+  z-index: 50;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.context-menu-item:hover { background: var(--bg-tertiary); }
+.context-menu-item.danger:hover { color: var(--danger); }
+.context-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN CONTENT
+   ═══════════════════════════════════════════════════════════════ */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Viewer Header (Title + Meta) ── */
+.viewer-header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+.viewer-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 4px;
+  cursor: pointer;
+  display: inline-block;
+}
+.title-edit-icon {
+  font-size: 13px;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s, color 0.15s;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.viewer-title:hover .title-edit-icon { opacity: 1; }
+.title-edit-icon:hover { color: var(--text-accent); }
+.viewer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.badge {
+  font-size: 10px;
+  background: var(--bg-tertiary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+.badge strong { color: var(--text-primary); margin-left: 4px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTROL BAR — Left / Center / Right
+   ═══════════════════════════════════════════════════════════════ */
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  gap: 12px;
+  min-height: var(--control-bar-height);
+}
+
+.control-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.control-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Toggle buttons (Compact/Detailed, Sort) */
+.toggle-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.toggle-btn:hover:not(.active) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Sort toggle */
+.sort-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sort-btn:hover { color: var(--text-accent); border-color: var(--text-accent); }
+
+/* Resume command display */
+.resume-cmd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resume-cmd:hover {
+  border-color: var(--text-accent);
+  color: var(--text-primary);
+}
+.resume-cmd .copy-icon {
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-size: 12px;
+}
+.resume-cmd:hover .copy-icon { opacity: 1; }
+
+/* Action buttons */
+.action-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.action-btn:hover { border-color: var(--text-accent); color: var(--text-accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEWER BODY — Messages Area
+   ═══════════════════════════════════════════════════════════════ */
+.viewer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+/* ── Date Group ── */
+.date-group { margin-bottom: 8px; }
+.date-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-primary);
+}
+.date-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.date-group-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.date-group-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+.date-group-chevron.collapsed { transform: rotate(-90deg); }
+.date-group-body { padding-left: 0; }
+
+/* ── Checkpoint Group ── */
+.checkpoint-group {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.checkpoint-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+.checkpoint-header:hover { background: var(--bg-tertiary); }
+
+.checkpoint-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.checkpoint-chevron.collapsed { transform: rotate(-90deg); }
+
+.checkpoint-index {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(76, 110, 245, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-family: 'SF Mono', monospace;
+}
+.checkpoint-summary {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.checkpoint-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.checkpoint-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.checkpoint-header:hover .checkpoint-actions { opacity: 1; }
+.checkpoint-action {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.checkpoint-action:hover { color: var(--text-accent); border-color: var(--text-accent); }
+.checkpoint-action.rewind:hover { color: var(--danger); border-color: var(--danger); }
+
+.checkpoint-body {
+  padding: 0 14px 14px;
+}
+
+/* ── Messages ── */
+.message {
+  margin-bottom: 10px;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+.message-user {
+  background: var(--user-bg);
+  border-left: 3px solid var(--user-border);
+}
+.message-assistant {
+  background: var(--assistant-bg);
+  border-left: 3px solid var(--assistant-border);
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.message-role {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-bright);
+  letter-spacing: 0.5px;
+}
+.message-time {
+  color: var(--text-muted);
+}
+.message-model {
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.message-body {
+  position: relative;
+}
+.message-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ── Message Truncation ── */
+.message-body-truncated {
+  max-height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+.message-body-truncated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(transparent, var(--msg-bg));
+  pointer-events: none;
+}
+.message-user .message-body-truncated::after { background: linear-gradient(transparent, var(--user-bg)); }
+.message-assistant .message-body-truncated::after { background: linear-gradient(transparent, var(--assistant-bg)); }
+
+.expand-btn {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.expand-btn:hover { text-decoration: underline; }
+
+/* ── Tool pills (compact mode) ── */
+.tool-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+}
+.tool-pill {
+  font-size: 10px;
+  font-family: 'SF Mono', monospace;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Agent inline block ── */
+.agent-block {
+  padding: 8px 10px;
+  background: rgba(76, 110, 245, 0.06);
+  border: 1px solid rgba(76, 110, 245, 0.15);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.agent-block-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.agent-type-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(76, 110, 245, 0.12);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.agent-desc {
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Scrollbar styling
+   ═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Annotations / notes (mock-only)
+   ═══════════════════════════════════════════════════════════════ */
+.mock-note {
+  font-size: 9px;
+  color: var(--pin-color);
+  background: rgba(255, 212, 59, 0.08);
+  border: 1px dashed rgba(255, 212, 59, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin: 4px 0;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ═══════════════════════════════════════════════════════════
+       SIDEBAR
+       ═══════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Sessions</h2>
+      <div class="sidebar-actions">
+        <button title="Compare mode">Compare</button>
+        <button title="Add root">+</button>
+      </div>
+    </div>
+
+    <div class="sidebar-tree">
+      <!-- Root Node -->
+      <div class="root-node">
+        <div class="root-header">
+          <span class="expand-icon">&#9660;</span>
+          <span>claude-code-analyzer</span>
+        </div>
+
+        <!-- Project Node -->
+        <div class="project-node">
+          <div class="project-header">
+            <span class="expand-icon">&#9660;</span>
+            <span class="project-name">codex/hackathon</span>
+            <span class="session-count">4</span>
+          </div>
+
+          <!-- Session 1 — Active, with ⋮ menu -->
+          <div class="session-node active" style="position:relative;">
+            <div class="session-content">
+              <div class="session-title">Syncthing Setup</div>
+              <div class="session-meta">
+                <span class="meta-item">Apr 5, 10:33</span>
+                <span class="meta-item">opus-4-2025</span>
+                <span class="meta-item branch">main</span>
+                <span class="meta-item">42KB</span>
+              </div>
+            </div>
+            <button class="session-menu-btn" style="opacity:1;" onclick="toggleMenu(this)">&#8942;</button>
+            <!-- Context menu (shown for demo) -->
+            <div class="context-menu" id="demo-menu" style="display:none;">
+              <button class="context-menu-item">&#9998; Rename</button>
+              <button class="context-menu-item">&#8644; Move</button>
+              <div class="context-menu-sep"></div>
+              <button class="context-menu-item danger">&#10005; Delete</button>
+            </div>
+          </div>
+
+          <!-- Session 2 -->
+          <div class="session-node">
+            <div class="session-content">
+              <div class="session-title">UI/UX Overhaul Implementation</div>
+              <div class="session-meta">
+                <span class="meta-item">Apr 5, 09:15</span>
+                <span class="meta-item">opus-4-2025</span>
+                <span class="meta-item branch">feature/ui</span>
+                <span class="meta-item">28KB</span>
+              </div>
+            </div>
+            <button class="session-menu-btn">&#8942;</button>
+          </div>
+
+          <!-- Session 3 -->
+          <div class="session-node">
+            <div class="session-content">
+              <div class="session-title">Branch/Rewind session lifecycle operations</div>
+              <div class="session-meta">
+                <span class="meta-item">Apr 4, 16:22</span>
+                <span class="meta-item">opus-4-2025</span>
+                <span class="meta-item">18KB</span>
+              </div>
+            </div>
+            <button class="session-menu-btn">&#8942;</button>
+          </div>
+
+          <!-- Session 4 -->
+          <div class="session-node">
+            <div class="session-content">
+              <div class="session-title">Initial project setup and server scaffolding</div>
+              <div class="session-meta">
+                <span class="meta-item">Apr 3, 11:40</span>
+                <span class="meta-item">sonnet-4-2025</span>
+                <span class="meta-item branch">main</span>
+                <span class="meta-item">56KB</span>
+              </div>
+            </div>
+            <button class="session-menu-btn">&#8942;</button>
+          </div>
+        </div>
+
+        <!-- Another Project (collapsed) -->
+        <div class="project-node">
+          <div class="project-header">
+            <span class="expand-icon">&#9654;</span>
+            <span class="project-name">snap/ins</span>
+            <span class="session-count">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mock-note" style="margin: 8px;">Sidebar is resizable via the drag handle on the right edge</div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       RESIZE HANDLE
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="resize-handle" id="resize-handle" title="Drag to resize sidebar"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════════════════════════ -->
+  <main class="main-content">
+    <!-- Viewer Header (Title + Meta) -->
+    <div class="viewer-header">
+      <h2 class="viewer-title" title="Click pencil to rename">Syncthing Setup <span class="title-edit-icon" onclick="this.parentElement.contentEditable='true';this.parentElement.focus()">&#9998;</span></h2>
+      <div class="viewer-meta">
+        <span class="badge">Model<strong>opus-4-2025</strong></span>
+        <span class="badge">Branch<strong>main</strong></span>
+        <span class="badge">Version<strong>2.1.88</strong></span>
+        <span class="badge">Started<strong>Apr 5, 10:33 AM</strong></span>
+        <span class="badge">Messages<strong>12u / 14a</strong></span>
+        <span class="badge">Tokens<strong>48,230 in / 31,100 out</strong></span>
+      </div>
+    </div>
+
+    <!-- ─── Control Bar ─── -->
+    <div class="control-bar">
+      <div class="control-bar-left">
+        <div class="toggle-group">
+          <button class="toggle-btn active">Compact</button>
+          <button class="toggle-btn">Detailed</button>
+        </div>
+        <button class="sort-btn" onclick="toggleSort(this)">
+          <span class="sort-icon">&#8593;</span> Oldest first
+        </button>
+      </div>
+
+      <div class="control-bar-right">
+        <div class="resume-cmd" onclick="copyResume()" title="Click to copy">
+          claude -r abc12345-def6-7890-ghij-klmnopqrstuv
+          <span class="copy-icon">&#128203;</span>
+        </div>
+        <button class="action-btn" onclick="alert('Exported!')">Export</button>
+      </div>
+    </div>
+
+    <!-- ─── Messages Area ─── -->
+    <div class="viewer-body">
+
+      <!-- ═══ DATE GROUP: Today ═══ -->
+      <div class="date-group">
+        <div class="date-group-header" onclick="toggleDateGroup(this)">
+          <span class="date-group-chevron">&#9660;</span>
+          <span class="date-group-label">Today</span>
+          <span class="date-group-line"></span>
+        </div>
+        <div class="date-group-body">
+
+          <!-- ── Checkpoint 5 (Expanded) ── -->
+          <div class="checkpoint-group">
+            <div class="checkpoint-header" onclick="toggleCheckpoint(this)">
+              <span class="checkpoint-chevron">&#9660;</span>
+              <span class="checkpoint-index">#5</span>
+              <span class="checkpoint-summary">Add support for session rename, resume, branch/fork, and rewind...</span>
+              <span class="checkpoint-time">10:33 AM</span>
+              <div class="checkpoint-actions">
+                <button class="checkpoint-action rewind">Rewind</button>
+                <button class="checkpoint-action">Branch</button>
+              </div>
+            </div>
+            <div class="checkpoint-body">
+              <!-- User message (truncated) -->
+              <div class="message message-user">
+                <div class="message-header">
+                  <span class="message-role">User</span>
+                  <span class="message-time">10:33 AM</span>
+                </div>
+                <div class="message-body message-body-truncated">
+                  <pre class="message-text">Add support for session rename, resume, branch/fork, and rewind for `claude-session-browser` sessions, grounded in how these behaviors are implemented in `claude-code-src` so there is no functional drift.
+
+## Checkpoints
+- Every user message is a checkpoint
+- Display checkpoint markers above each user message
+- Each checkpoint shows Rewind and Branch buttons on hover
+
+## Rename
+- Double-click the session title to edit inline
+- Appends a custom-title entry to the JSONL file (last-write-wins pattern)
+
+## Resume
+- Copy `claude -r {sessionId}` to clipboard
+- Brief "Copied!" feedback
+
+## Branch/Fork
+- Creates a new session file with messages up to selected checkpoint
+- Adds "(Branch)" suffix to title
+- Follows claude-code-src branch.ts pattern: new UUID, forkedFrom metadata
+
+## Rewind
+- Destructive file truncation with confirmation dialog
+- Removes all messages after selected checkpoint</pre>
+                </div>
+                <button class="expand-btn" onclick="toggleExpand(this)">Expand</button>
+              </div>
+
+              <!-- Tool calls (compact pills) -->
+              <div class="tool-pills">
+                <span class="tool-pill">Read parser.ts</span>
+                <span class="tool-pill">Read branch.ts</span>
+                <span class="tool-pill">Grep "rewind"</span>
+                <span class="tool-pill">Read operations.ts</span>
+              </div>
+
+              <!-- Agent call -->
+              <div class="agent-block">
+                <div class="agent-block-header">
+                  <span class="agent-type-badge">Explore</span>
+                  <span class="agent-desc">Analyze branch implementation</span>
+                </div>
+              </div>
+
+              <!-- Final assistant response -->
+              <div class="message message-assistant">
+                <div class="message-header">
+                  <span class="message-role">Assistant</span>
+                  <span class="message-time">10:48 AM</span>
+                  <span class="message-model">opus-4-2025</span>
+                </div>
+                <div class="message-body">
+                  <pre class="message-text">All session lifecycle features are complete and verified:
+
+- **Rename**: Double-click title to edit, saves via append to JSONL
+- **Resume**: "Copy Resume Cmd" button copies `claude -r {sessionId}` to clipboard
+- **Branch**: Creates new session file with messages up to selected checkpoint
+- **Rewind**: Destructive truncation with confirmation dialog</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Checkpoint 4 (Collapsed) ── -->
+          <div class="checkpoint-group">
+            <div class="checkpoint-header" onclick="toggleCheckpoint(this)">
+              <span class="checkpoint-chevron collapsed">&#9660;</span>
+              <span class="checkpoint-index">#4</span>
+              <span class="checkpoint-summary">Ensure that all build-generated and OS-specific files have been added to .stignore...</span>
+              <span class="checkpoint-time">09:15 AM</span>
+              <div class="checkpoint-actions">
+                <button class="checkpoint-action rewind">Rewind</button>
+                <button class="checkpoint-action">Branch</button>
+              </div>
+            </div>
+            <!-- Body hidden (collapsed) -->
+          </div>
+
+          <!-- ── Checkpoint 3 (Collapsed) ── -->
+          <div class="checkpoint-group">
+            <div class="checkpoint-header" onclick="toggleCheckpoint(this)">
+              <span class="checkpoint-chevron collapsed">&#9660;</span>
+              <span class="checkpoint-index">#3</span>
+              <span class="checkpoint-summary">Do a clean build for claude-session-browser</span>
+              <span class="checkpoint-time">08:50 AM</span>
+              <div class="checkpoint-actions">
+                <button class="checkpoint-action rewind">Rewind</button>
+                <button class="checkpoint-action">Branch</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ DATE GROUP: Yesterday ═══ -->
+      <div class="date-group">
+        <div class="date-group-header" onclick="toggleDateGroup(this)">
+          <span class="date-group-chevron">&#9660;</span>
+          <span class="date-group-label">Yesterday</span>
+          <span class="date-group-line"></span>
+        </div>
+        <div class="date-group-body">
+
+          <!-- ── Checkpoint 2 (Collapsed) ── -->
+          <div class="checkpoint-group">
+            <div class="checkpoint-header" onclick="toggleCheckpoint(this)">
+              <span class="checkpoint-chevron collapsed">&#9660;</span>
+              <span class="checkpoint-index">#2</span>
+              <span class="checkpoint-summary">Initialize the repo and commit the code</span>
+              <span class="checkpoint-time">4:22 PM</span>
+              <div class="checkpoint-actions">
+                <button class="checkpoint-action rewind">Rewind</button>
+                <button class="checkpoint-action">Branch</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Checkpoint 1 (Collapsed) ── -->
+          <div class="checkpoint-group">
+            <div class="checkpoint-header" onclick="toggleCheckpoint(this)">
+              <span class="checkpoint-chevron collapsed">&#9660;</span>
+              <span class="checkpoint-index">#1</span>
+              <span class="checkpoint-summary">Move the Move button to the left of the expand/collapse arrow...</span>
+              <span class="checkpoint-time">2:10 PM</span>
+              <div class="checkpoint-actions">
+                <button class="checkpoint-action rewind">Rewind</button>
+                <button class="checkpoint-action">Branch</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ DATE GROUP: This Week (Collapsed) ═══ -->
+      <div class="date-group">
+        <div class="date-group-header" onclick="toggleDateGroup(this)">
+          <span class="date-group-chevron collapsed">&#9660;</span>
+          <span class="date-group-label">This Week</span>
+          <span class="date-group-line"></span>
+        </div>
+        <!-- Body hidden (collapsed) -->
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Interactive JS (for mock demo only)
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+// Resize sidebar
+const sidebar = document.getElementById('sidebar');
+const handle = document.getElementById('resize-handle');
+let isResizing = false;
+
+handle.addEventListener('mousedown', (e) => {
+  isResizing = true;
+  handle.classList.add('active');
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = 'col-resize';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return;
+  const newWidth = Math.max(200, Math.min(600, e.clientX));
+  sidebar.style.width = newWidth + 'px';
+  sidebar.style.minWidth = newWidth + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    handle.classList.remove('active');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }
+});
+
+// Toggle context menu
+function toggleMenu(btn) {
+  const menu = btn.parentElement.querySelector('.context-menu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close menus on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.session-menu-btn') && !e.target.closest('.context-menu')) {
+    document.querySelectorAll('.context-menu').forEach(m => m.style.display = 'none');
+  }
+});
+
+// Toggle checkpoint expand/collapse
+function toggleCheckpoint(header) {
+  const chevron = header.querySelector('.checkpoint-chevron');
+  const body = header.nextElementSibling;
+  const isCollapsed = chevron.classList.contains('collapsed');
+
+  if (isCollapsed) {
+    chevron.classList.remove('collapsed');
+    if (body && body.classList.contains('checkpoint-body')) {
+      body.style.display = '';
+    }
+  } else {
+    chevron.classList.add('collapsed');
+    if (body && body.classList.contains('checkpoint-body')) {
+      body.style.display = 'none';
+    }
+  }
+}
+
+// Toggle date group expand/collapse
+function toggleDateGroup(header) {
+  const chevron = header.querySelector('.date-group-chevron');
+  const body = header.nextElementSibling;
+  const isCollapsed = chevron.classList.contains('collapsed');
+
+  if (isCollapsed) {
+    chevron.classList.remove('collapsed');
+    if (body) body.style.display = '';
+  } else {
+    chevron.classList.add('collapsed');
+    if (body) body.style.display = 'none';
+  }
+}
+
+// Toggle message expand/collapse
+function toggleExpand(btn) {
+  const body = btn.previousElementSibling;
+  if (body.classList.contains('message-body-truncated')) {
+    body.classList.remove('message-body-truncated');
+    btn.textContent = 'Collapse';
+  } else {
+    body.classList.add('message-body-truncated');
+    btn.textContent = 'Expand';
+  }
+}
+
+// Sort toggle
+function toggleSort(btn) {
+  const icon = btn.querySelector('.sort-icon');
+  if (btn.textContent.includes('Oldest')) {
+    icon.innerHTML = '&#8595;';
+    btn.innerHTML = '<span class="sort-icon">&#8595;</span> Newest first';
+  } else {
+    icon.innerHTML = '&#8593;';
+    btn.innerHTML = '<span class="sort-icon">&#8593;</span> Oldest first';
+  }
+}
+
+// Copy resume command
+function copyResume() {
+  const text = 'claude -r abc12345-def6-7890-ghij-klmnopqrstuv';
+  navigator.clipboard.writeText(text).then(() => {
+    const cmd = document.querySelector('.resume-cmd');
+    const orig = cmd.innerHTML;
+    cmd.innerHTML = 'Copied!';
+    cmd.style.color = 'var(--accent)';
+    setTimeout(() => { cmd.innerHTML = orig; cmd.style.color = ''; }, 1500);
+  });
+}
+</script>
+
+</body>
+</html>

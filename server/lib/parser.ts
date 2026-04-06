@@ -22,6 +22,8 @@ export interface NormalizedMessage {
     cacheReadTokens?: number
   }
   stopReason?: string | null
+  parentUuid?: string | null
+  messageIndex?: number
 }
 
 export interface ParsedConversation {
@@ -125,6 +127,8 @@ export async function parseConversation(filePath: string): Promise<ParsedConvers
           messages.push({
             type: 'user',
             uuid: record.uuid,
+            parentUuid: record.parentUuid ?? null,
+            messageIndex: messages.length,
             timestamp: record.timestamp,
             content: text,
             gitBranch: record.gitBranch,
@@ -147,6 +151,8 @@ export async function parseConversation(filePath: string): Promise<ParsedConvers
           messages.push({
             type: 'assistant',
             uuid: record.uuid,
+            parentUuid: record.parentUuid ?? null,
+            messageIndex: messages.length,
             timestamp: record.timestamp,
             content: extracted.text,
             model: record.message.model,

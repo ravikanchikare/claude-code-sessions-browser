@@ -1,8 +1,44 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import type { ProjectInfo, SessionInfo } from '../../types.js'
 import { PinButton } from '../common/PinButton.js'
 import { SessionNode } from './SessionNode.js'
 import * as api from '../../api.js'
+
+function ProjectContextMenu({ onMoveProject, onClose }: { onMoveProject: () => void; onClose: () => void }) {
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (!menuRef.current) return
+    const rect = menuRef.current.getBoundingClientRect()
+    if (rect.bottom > window.innerHeight - 10) {
+      menuRef.current.style.top = 'auto'
+      menuRef.current.style.bottom = '100%'
+    }
+  }, [])
+
+  return (
+    <div className="context-menu" ref={menuRef}>
+      <button className="context-menu-item" onClick={(e) => { e.stopPropagation(); onMoveProject(); onClose() }}>
+        <span className="context-menu-icon">&#8644;</span> Move to&hellip;
+      </button>
+    </div>
+  )
+}
 
 interface ProjectNodeProps {
   rootId: string
@@ -19,6 +55,7 @@ interface ProjectNodeProps {
   onDeleteSession: (sessionId: string) => void
   onMoveSession?: (sessionId: string, sessionTitle: string) => void
   onMoveProject?: () => void
+  onRenameSession?: (sessionId: string) => void
   refreshTrigger?: number
 }
 
@@ -26,7 +63,7 @@ export function ProjectNode({
   rootId, project, isPinned, onTogglePin,
   activeSessionId, activeSubAgentId, compareSelections, compareMode,
   onSelectSession, onSelectSubAgent, onCompareToggle, onDeleteSession,
-  onMoveSession, onMoveProject, refreshTrigger,
+  onMoveSession, onMoveProject, onRenameSession, refreshTrigger,
 }: ProjectNodeProps) {
   const [expanded, setExpanded] = useState(false)
   const [sessions, setSessions] = useState<SessionInfo[]>([])
@@ -92,20 +129,27 @@ export function ProjectNode({
 
   const shortName = project.displayName.split('/').filter(Boolean).slice(-2).join('/')
 
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <div className={`project-node ${isPinned ? 'pinned' : ''}`}>
       <div className="project-header" onClick={() => setExpanded(!expanded)}>
-        {onMoveProject && (
-          <button
-            className="project-move-btn"
-            onClick={(e) => { e.stopPropagation(); onMoveProject() }}
-            title="Move project to another root"
-          >&#x21c4;</button>
-        )}
         <span className="expand-icon">{expanded ? '\u25BC' : '\u25B6'}</span>
         <PinButton pinned={isPinned} onToggle={onTogglePin} />
         <span className="project-name" title={project.displayName}>{shortName}</span>
         <span className="session-count">{project.sessionCount}</span>
+        {onMoveProject && (
+          <div className="project-menu-wrapper">
+            <button
+              className="project-menu-btn"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
+              title="Project actions"
+            >&#8942;</button>
+            {menuOpen && (
+              <ProjectContextMenu onMoveProject={onMoveProject} onClose={() => setMenuOpen(false)} />
+            )}
+          </div>
+        )}
       </div>
       {expanded && (
         <div className="project-sessions">
@@ -127,6 +171,7 @@ export function ProjectNode({
                 const title = session.customTitle ?? session.firstPrompt ?? 'Untitled'
                 onMoveSession(session.id, title)
               } : undefined}
+              onRename={onRenameSession ? () => onRenameSession(session.id) : undefined}
               onDelete={() => {
                 onDeleteSession(session.id)
                 setSessions(prev => prev.filter(s => s.id !== session.id))

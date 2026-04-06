@@ -101,14 +101,29 @@ input:focus {
    --------------------------------------------------------------------------- */
 
 .sidebar {
-  width: var(--sidebar-width);
-  min-width: var(--sidebar-width);
   height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
   overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Resize handle between sidebar and main content */
+.resize-handle {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.resize-handle:hover {
+  background: var(--accent);
+}
+body.resizing {
+  user-select: none;
+  cursor: col-resize;
 }
 
 .sidebar-header {
@@ -339,8 +354,24 @@ input:focus {
 }
 
 .compare-checkbox {
-  margin-top: 3px;
-  flex-shrink: 0;
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: color 0.15s;
+  z-index: 2;
+}
+
+.compare-checkbox:hover {
+  color: var(--text-accent);
+}
+
+.session-node.compare-selected .compare-checkbox {
+  color: var(--text-accent);
 }
 
 .session-content {
@@ -348,55 +379,80 @@ input:focus {
   min-width: 0;
 }
 
-.session-delete-btn {
-  font-size: 15px;
-  color: var(--text-muted);
-  padding: 0 4px;
-  opacity: 0;
+/* Three-dot menu button */
+.session-menu-wrapper {
+  position: relative;
   flex-shrink: 0;
-  transition: opacity 0.1s, color 0.1s;
   align-self: flex-start;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
-.session-node:hover .session-delete-btn {
+.session-menu-btn {
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s, color 0.1s;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.session-node:hover .session-menu-btn {
   opacity: 1;
 }
 
-.session-delete-btn:hover {
+.session-menu-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-bright);
+}
+
+/* Context menu dropdown */
+.context-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 50;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 4px 0;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.context-menu-danger:hover {
   color: var(--danger);
 }
 
-.session-delete-confirm {
-  display: flex;
-  gap: 4px;
+.context-menu-icon {
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
   flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 2px;
 }
 
-.delete-confirm-btn {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: var(--danger);
-  color: white;
-  border-radius: var(--radius-sm);
-}
-
-.delete-confirm-btn:hover {
-  opacity: 0.9;
-}
-
-.delete-cancel-btn {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-}
-
-.delete-cancel-btn:hover {
-  background: var(--bg-hover);
+.context-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
 }
 
 .session-title {
@@ -640,56 +696,308 @@ input:focus {
   gap: 6px;
 }
 
-.viewer-actions {
+/* Control Bar */
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.control-bar-left {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  flex-shrink: 0;
 }
 
-.view-toggle {
+.control-bar-right {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.toggle-group {
+  display: flex;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--border);
 }
 
-.view-toggle-btn {
-  padding: 4px 12px;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-size: 12px;
-  transition: background 0.15s, color 0.15s;
+.toggle-group-btn {
+  padding: 5px 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
   border: none;
   cursor: pointer;
+  transition: background 0.1s, color 0.1s;
 }
 
-.view-toggle-btn:not(:last-child) {
+.toggle-group-btn:not(:last-child) {
   border-right: 1px solid var(--border);
 }
 
-.view-toggle-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-bright);
-}
-
-.view-toggle-btn.active {
-  background: var(--accent);
-  color: var(--text-bright);
-}
-
-.export-btn {
-  padding: 4px 12px;
+.toggle-group-btn:hover:not(.active) {
   background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 12px;
-  transition: background 0.15s;
+  color: var(--text-primary);
 }
 
-.export-btn:hover {
-  background: var(--bg-hover);
+.toggle-group-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sort-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sort-btn:hover {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+/* Resume command display */
+.resume-cmd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-cmd:hover {
+  border-color: var(--text-accent);
+  color: var(--text-primary);
+}
+
+.resume-cmd .copy-icon {
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-size: 12px;
+}
+
+.resume-cmd:hover .copy-icon {
+  opacity: 1;
+}
+
+.resume-cmd-copied {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.control-bar-action-btn {
+  padding: 5px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.control-bar-action-btn:hover {
+  border-color: var(--text-accent);
+  color: var(--text-accent);
+}
+
+/* Pencil icon for rename */
+.title-edit-icon {
+  font-size: 13px;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s, color 0.15s;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.viewer-title:hover .title-edit-icon {
+  opacity: 1;
+}
+
+.title-edit-icon:hover {
+  color: var(--text-accent);
+}
+
+.editable-title-input {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-bright);
+  background: var(--bg-primary);
+  border: 1px solid var(--text-accent);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  width: 100%;
+  outline: none;
+  font-family: var(--font-sans);
+}
+
+/* Date Group */
+.date-group {
+  margin-bottom: 8px;
+}
+
+.date-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-primary);
+}
+
+.date-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.date-group-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.date-group-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.date-group-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.date-group-body {
+  padding-left: 0;
+}
+
+/* Checkpoint Group */
+.checkpoint-group {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.checkpoint-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.checkpoint-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.checkpoint-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.checkpoint-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.checkpoint-index {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(76, 110, 245, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+
+.checkpoint-summary {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.checkpoint-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.checkpoint-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.checkpoint-header:hover .checkpoint-actions {
+  opacity: 1;
+}
+
+.checkpoint-action {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.checkpoint-action:hover {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.checkpoint-rewind:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.checkpoint-body {
+  padding: 0 14px 14px;
 }
 
 .viewer-messages {
@@ -766,6 +1074,53 @@ input:focus {
 
 .message-body {
   color: var(--text-primary);
+}
+
+.message-body-truncated {
+  max-height: 200px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+.message-body-clickable {
+  cursor: pointer;
+}
+
+.message-body-truncated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  pointer-events: none;
+}
+
+.message-user .message-body-truncated::after {
+  background: linear-gradient(transparent, var(--user-bg));
+}
+
+.message-assistant .message-body-truncated::after {
+  background: linear-gradient(transparent, var(--assistant-bg));
+}
+
+.message-summary .message-body-truncated::after {
+  background: linear-gradient(transparent, var(--summary-bg, #3b2e1a));
+}
+
+.expand-collapse-btn {
+  font-size: 11px;
+  color: var(--text-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.expand-collapse-btn:hover {
+  text-decoration: underline;
 }
 
 .message-text {
@@ -1027,7 +1382,7 @@ input:focus {
 .compare-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1px;
   background: var(--border);
   overflow: hidden;
@@ -1180,47 +1535,33 @@ input:focus {
    Move Buttons & Dialog
    --------------------------------------------------------------------------- */
 
-.session-move-btn {
-  position: absolute;
-  left: 10px;
-  top: 7px;
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 0;
-  opacity: 0;
-  cursor: pointer;
-  background: none;
-  border: none;
-  transition: opacity 0.15s, color 0.15s;
-  z-index: 1;
-}
 
-.session-node:hover .session-move-btn {
-  opacity: 1;
-}
-
-.session-move-btn:hover {
-  color: var(--text-accent);
-}
-
-.project-move-btn {
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 0 2px;
-  opacity: 0;
-  cursor: pointer;
-  background: none;
-  border: none;
-  transition: opacity 0.15s, color 0.15s;
+.project-menu-wrapper {
+  position: relative;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
-.project-header:hover .project-move-btn {
+.project-menu-btn {
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s, color 0.1s;
+  cursor: pointer;
+  line-height: 1;
+  background: none;
+  border: none;
+}
+
+.project-header:hover .project-menu-btn {
   opacity: 1;
 }
 
-.project-move-btn:hover {
-  color: var(--text-accent);
+.project-menu-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-bright);
 }
 
 .move-dialog {

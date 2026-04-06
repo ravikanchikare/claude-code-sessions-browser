@@ -10,7 +10,18 @@ interface MessageBubbleProps {
 function formatTime(ts?: string): string {
   if (!ts) return ''
   try {
-    return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const date = new Date(ts)
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterdayStart = new Date(todayStart)
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1)
+    const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    if (date >= todayStart) return `Today ${time}`
+    if (date >= yesterdayStart) return `Yesterday ${time}`
+    const weekStart = new Date(todayStart)
+    weekStart.setDate(weekStart.getDate() - todayStart.getDay())
+    if (date >= weekStart) return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${time}`
+    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${time}`
   } catch { return '' }
 }
 
@@ -47,9 +58,19 @@ function isAgentToolCall(tc: { name: string; input: Record<string, unknown> }): 
   return (tc.name === 'Task' || tc.name === 'Agent') && typeof tc.input.subagent_type === 'string'
 }
 
+const TRUNCATION_CHARS = 600
+const TRUNCATION_LINES = 15
+
+function shouldTruncate(content: string): boolean {
+  if (content.length > TRUNCATION_CHARS) return true
+  const newlines = content.split('\n').length
+  return newlines > TRUNCATION_LINES
+}
+
 export function MessageBubble({ message, onNavigateAgent, onAgentClick }: MessageBubbleProps) {
   const [showThinking, setShowThinking] = useState(false)
   const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set())
+  const [contentExpanded, setContentExpanded] = useState(false)
 
   if (message.type === 'system') {
     return (
@@ -99,11 +120,18 @@ export function MessageBubble({ message, onNavigateAgent, onAgentClick }: Messag
           </span>
         )}
       </div>
-      {message.content.trim() && (
-        <div className="message-body">
-          <pre className="message-text">{message.content}</pre>
-        </div>
-      )}
+      {message.content.trim() && (() => {
+        const truncatable = shouldTruncate(message.content)
+        const isTruncated = truncatable && !contentExpanded
+        return (
+          <div
+            className={`message-body ${isTruncated ? 'message-body-truncated' : ''} ${truncatable ? 'message-body-clickable' : ''}`}
+            onClick={truncatable ? () => setContentExpanded(!contentExpanded) : undefined}
+          >
+            <pre className="message-text">{message.content}</pre>
+          </div>
+        )
+      })()}
       {message.thinkingContent && (
         <div className="message-extra">
           <button className="toggle-btn" onClick={() => setShowThinking(!showThinking)}>

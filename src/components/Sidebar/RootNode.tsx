@@ -14,11 +14,12 @@ interface RootNodeProps {
   compareMode: boolean
   onSelectSession: (projectId: string, sessionId: string) => void
   onSelectSubAgent: (projectId: string, parentSessionId: string, childSessionId: string) => void
-  onCompareToggle: (sessionId: string) => void
+  onCompareToggle: (projectId: string, sessionId: string) => void
   onDeleteSession: (projectId: string, sessionId: string) => void
   onRemoveRoot: () => void
   onMoveSession?: (projectId: string, sessionId: string, sessionTitle: string) => void
   onMoveProject?: (projectId: string, projectName: string) => void
+  onRenameSession?: (projectId: string, sessionId: string) => void
   refreshTrigger?: number
 }
 
@@ -26,7 +27,7 @@ export function RootNode({
   root, isPinned, onTogglePin,
   activeSessionId, activeSubAgentId, activeProjectId, compareSelections, compareMode,
   onSelectSession, onSelectSubAgent, onCompareToggle, onDeleteSession, onRemoveRoot,
-  onMoveSession, onMoveProject, refreshTrigger,
+  onMoveSession, onMoveProject, onRenameSession, refreshTrigger,
 }: RootNodeProps) {
   const [expanded, setExpanded] = useState(true)
   const [projects, setProjects] = useState<ProjectInfo[]>([])
@@ -79,10 +80,11 @@ export function RootNode({
               compareMode={compareMode}
               onSelectSession={(sessionId) => onSelectSession(project.id, sessionId)}
               onSelectSubAgent={(parentSessionId, childSessionId) => onSelectSubAgent(project.id, parentSessionId, childSessionId)}
-              onCompareToggle={onCompareToggle}
+              onCompareToggle={(sessionId) => onCompareToggle(project.id, sessionId)}
               onDeleteSession={(sessionId) => onDeleteSession(project.id, sessionId)}
               onMoveSession={onMoveSession ? (sessionId, sessionTitle) => onMoveSession(project.id, sessionId, sessionTitle) : undefined}
               onMoveProject={onMoveProject ? () => onMoveProject(project.id, project.displayName) : undefined}
+              onRenameSession={onRenameSession ? (sessionId) => onRenameSession(project.id, sessionId) : undefined}
               refreshTrigger={refreshTrigger}
             />
           ))}

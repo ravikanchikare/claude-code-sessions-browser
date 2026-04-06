@@ -29,7 +29,7 @@ export function CompareView({ selections, onRemoveSelection, onExport }: Compare
   }, [selections])
 
   if (selections.length === 0) {
-    return <div className="viewer-empty">Select sessions in the sidebar to compare (max 3)</div>
+    return <div className="viewer-empty">Select sessions in the sidebar to compare (max 2)</div>
   }
 
   return (

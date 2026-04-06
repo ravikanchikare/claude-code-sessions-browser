@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { Sidebar } from './components/Sidebar/Sidebar.js'
+import { ResizeHandle } from './components/Sidebar/ResizeHandle.js'
 import { ConversationViewer } from './components/Viewer/ConversationViewer.js'
 import { CompareView } from './components/Comparator/CompareView.js'
 import { ExportDialog } from './components/Export/ExportDialog.js'
@@ -16,6 +17,15 @@ export function App() {
   const { conversation: subConversation, loading: subLoading, error: subError, load: subLoad, clear: subClear } = useMessages()
   const { isPinned, togglePin } = usePinnedProjects()
 
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('sidebarWidth')
+    return saved ? Number(saved) : 340
+  })
+  const handleSidebarResize = useCallback((w: number) => {
+    setSidebarWidth(w)
+    localStorage.setItem('sidebarWidth', String(w))
+  }, [])
+
   const [activeRootId, setActiveRootId] = useState<string | null>(null)
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
@@ -26,6 +36,7 @@ export function App() {
   const [compareSelections, setCompareSelections] = useState<CompareSelection[]>([])
 
   const [showExport, setShowExport] = useState(false)
+  const [renameRequested, setRenameRequested] = useState(0)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [moveDialog, setMoveDialog] = useState<{
     mode: 'session' | 'project'
@@ -87,17 +98,16 @@ export function App() {
 
   const compareSessionIds = new Set(compareSelections.map(s => s.sessionId))
 
-  const handleCompareToggle = useCallback((sessionId: string) => {
+  const handleCompareToggle = useCallback((rootId: string, projectId: string, sessionId: string) => {
     setCompareSelections(prev => {
       const existing = prev.find(s => s.sessionId === sessionId)
       if (existing) {
         return prev.filter(s => s.sessionId !== sessionId)
       }
-      if (prev.length >= 3) return prev
-      if (!activeRootId || !activeProjectId) return prev
-      return [...prev, { rootId: activeRootId, projectId: activeProjectId, sessionId }]
+      if (prev.length >= 2) return prev
+      return [...prev, { rootId, projectId, sessionId }]
     })
-  }, [activeRootId, activeProjectId])
+  }, [])
 
   const handleToggleCompareMode = useCallback(() => {
     setCompareMode(prev => {
@@ -158,9 +168,45 @@ export function App() {
     setRefreshTrigger(prev => prev + 1)
   }, [moveDialog, activeSessionId, activeProjectId, clear, subClear])
 
+  const handleRenameFromSidebar = useCallback((rootId: string, projectId: string, sessionId: string) => {
+    // Select the session first, then trigger rename mode
+    setActiveRootId(rootId)
+    setActiveProjectId(projectId)
+    setActiveSessionId(sessionId)
+    setActiveSubAgentId(null)
+    subClear()
+    load(rootId, projectId, sessionId)
+    setRenameRequested(prev => prev + 1)
+  }, [load, subClear])
+
+  const handleRename = useCallback(async (newTitle: string) => {
+    if (!activeRootId || !activeProjectId || !activeSessionId) return
+    await api.renameSession(activeRootId, activeProjectId, activeSessionId, newTitle)
+    setRefreshTrigger(prev => prev + 1)
+    load(activeRootId, activeProjectId, activeSessionId)
+  }, [activeRootId, activeProjectId, activeSessionId, load])
+
+  const handleRewind = useCallback(async (targetMessageUuid: string) => {
+    if (!activeRootId || !activeProjectId || !activeSessionId) return
+    const ok = window.confirm('Rewind is destructive. All messages after this checkpoint will be permanently deleted. Continue?')
+    if (!ok) return
+    await api.rewindSession(activeRootId, activeProjectId, activeSessionId, targetMessageUuid)
+    setRefreshTrigger(prev => prev + 1)
+    load(activeRootId, activeProjectId, activeSessionId)
+  }, [activeRootId, activeProjectId, activeSessionId, load])
+
+  const handleBranch = useCallback(async (targetMessageUuid: string) => {
+    if (!activeRootId || !activeProjectId || !activeSessionId) return
+    const result = await api.branchSession(activeRootId, activeProjectId, activeSessionId, targetMessageUuid)
+    setRefreshTrigger(prev => prev + 1)
+    setActiveSessionId(result.newSessionId)
+    load(activeRootId, activeProjectId, result.newSessionId)
+  }, [activeRootId, activeProjectId, activeSessionId, load])
+
   return (
     <div className="app">
       <Sidebar
+        style={{ width: sidebarWidth, minWidth: sidebarWidth }}
         roots={roots}
         isPinned={isPinned}
         onTogglePin={togglePin}
@@ -179,8 +225,11 @@ export function App() {
         onRemoveRoot={removeRoot}
         onMoveSession={handleMoveSession}
         onMoveProject={handleMoveProject}
+        onRenameSession={handleRenameFromSidebar}
         refreshTrigger={refreshTrigger}
       />
+
+      <ResizeHandle onResize={handleSidebarResize} />
 
       <main className="main-content">
         {compareMode ? (
@@ -202,6 +251,10 @@ export function App() {
             subError={subError}
             onSelectSubAgent={handleSelectSubAgentById}
             onCloseSubAgent={handleCloseSubAgent}
+            onRename={handleRename}
+            renameRequested={renameRequested}
+            onRewind={handleRewind}
+            onBranch={handleBranch}
           />
         )}
       </main>

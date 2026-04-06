@@ -14,14 +14,16 @@ interface SidebarProps {
   compareMode: boolean
   onSelectSession: (rootId: string, projectId: string, sessionId: string) => void
   onSelectSubAgent: (rootId: string, projectId: string, parentSessionId: string, childSessionId: string) => void
-  onCompareToggle: (sessionId: string) => void
+  onCompareToggle: (rootId: string, projectId: string, sessionId: string) => void
   onToggleCompareMode: () => void
   onDeleteSession: (rootId: string, projectId: string, sessionId: string) => void
   onAddRoot: (path: string) => void
   onRemoveRoot: (rootId: string) => void
   onMoveSession?: (rootId: string, projectId: string, sessionId: string, sessionTitle: string) => void
   onMoveProject?: (rootId: string, projectId: string, projectName: string) => void
+  onRenameSession?: (rootId: string, projectId: string, sessionId: string) => void
   refreshTrigger?: number
+  style?: React.CSSProperties
 }
 
 export function Sidebar({
@@ -30,7 +32,7 @@ export function Sidebar({
   compareSelections, compareMode,
   onSelectSession, onSelectSubAgent, onCompareToggle, onToggleCompareMode,
   onDeleteSession, onAddRoot, onRemoveRoot,
-  onMoveSession, onMoveProject, refreshTrigger,
+  onMoveSession, onMoveProject, onRenameSession, refreshTrigger, style,
 }: SidebarProps) {
   const [addingRoot, setAddingRoot] = useState(false)
   const [newRootPath, setNewRootPath] = useState('')
@@ -44,7 +46,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" style={style}>
       <div className="sidebar-header">
         <h2>Sessions</h2>
         <div className="sidebar-actions">
@@ -78,7 +80,7 @@ export function Sidebar({
 
       {compareMode && compareSelections.size > 0 && (
         <div className="compare-info">
-          {compareSelections.size} session{compareSelections.size !== 1 ? 's' : ''} selected (max 3)
+          {compareSelections.size} session{compareSelections.size !== 1 ? 's' : ''} selected (max 2)
         </div>
       )}
 
@@ -96,11 +98,12 @@ export function Sidebar({
             compareMode={compareMode}
             onSelectSession={(projectId, sessionId) => onSelectSession(root.id, projectId, sessionId)}
             onSelectSubAgent={(projectId, parentSessionId, childSessionId) => onSelectSubAgent(root.id, projectId, parentSessionId, childSessionId)}
-            onCompareToggle={onCompareToggle}
+            onCompareToggle={(projectId, sessionId) => onCompareToggle(root.id, projectId, sessionId)}
             onDeleteSession={(projectId, sessionId) => onDeleteSession(root.id, projectId, sessionId)}
             onRemoveRoot={() => onRemoveRoot(root.id)}
             onMoveSession={onMoveSession ? (projectId, sessionId, sessionTitle) => onMoveSession(root.id, projectId, sessionId, sessionTitle) : undefined}
-            onMoveProject={onMoveProject ? (projectId, projectName) => onMoveProject(root.id, projectId, projectName) : undefined}
+            onMoveProject={onMoveProject && roots.length > 1 ? (projectId, projectName) => onMoveProject(root.id, projectId, projectName) : undefined}
+            onRenameSession={onRenameSession ? (projectId, sessionId) => onRenameSession(root.id, projectId, sessionId) : undefined}
             refreshTrigger={refreshTrigger}
           />
         ))}

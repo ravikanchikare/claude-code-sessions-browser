@@ -33,7 +33,7 @@ export async function startServer(port: number, isDev: boolean): Promise<void> {
     // Vite proxies /api requests to this Express server
   } else {
     // In production, serve the built Vite output
-    const distPath = resolve(__dirname, '..', 'dist')
+    const distPath = resolve(__dirname, '..', '..', 'dist')
     app.use(express.static(distPath))
     app.get('*', (_req, res) => {
       res.sendFile(resolve(distPath, 'index.html'))
