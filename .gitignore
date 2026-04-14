@@ -6,3 +6,4 @@ build/
 *.jpeg
 .vite/
 .playwright-mcp/
+.DS_Store
