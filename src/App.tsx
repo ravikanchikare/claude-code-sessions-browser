@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Sidebar } from './components/Sidebar/Sidebar.js'
 import { ResizeHandle } from './components/Sidebar/ResizeHandle.js'
 import { ConversationViewer } from './components/Viewer/ConversationViewer.js'
 import { CompareView } from './components/Comparator/CompareView.js'
-import { ExportDialog } from './components/Export/ExportDialog.js'
 import { MoveDialog } from './components/MoveDialog.js'
 import { useRoots } from './hooks/useRoots.js'
 import { useMessages } from './hooks/useMessages.js'
@@ -11,11 +10,32 @@ import { usePinnedProjects } from './hooks/usePinnedProjects.js'
 import * as api from './api.js'
 import type { CompareSelection, SessionInfo } from './types.js'
 
+function parseHash(): { rootId: string | null; projectId: string | null; sessionId: string | null } {
+  const hash = window.location.hash.slice(1)
+  if (!hash) return { rootId: null, projectId: null, sessionId: null }
+  const params = new URLSearchParams(hash)
+  return {
+    rootId: params.get('root'),
+    projectId: params.get('project'),
+    sessionId: params.get('session'),
+  }
+}
+
+function updateHash(rootId: string | null, projectId: string | null, sessionId: string | null) {
+  if (rootId && projectId && sessionId) {
+    const params = new URLSearchParams({ root: rootId, project: projectId, session: sessionId })
+    history.replaceState(null, '', `#${params.toString()}`)
+  } else {
+    history.replaceState(null, '', window.location.pathname)
+  }
+}
+
 export function App() {
   const { roots, addRoot, removeRoot } = useRoots()
   const { conversation, loading, error, load, clear } = useMessages()
   const { conversation: subConversation, loading: subLoading, error: subError, load: subLoad, clear: subClear } = useMessages()
   const { isPinned, togglePin } = usePinnedProjects()
+  const initializedRef = useRef(false)
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebarWidth')
@@ -35,7 +55,6 @@ export function App() {
   const [compareMode, setCompareMode] = useState(false)
   const [compareSelections, setCompareSelections] = useState<CompareSelection[]>([])
 
-  const [showExport, setShowExport] = useState(false)
   const [renameRequested, setRenameRequested] = useState(0)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [moveDialog, setMoveDialog] = useState<{
@@ -63,6 +82,57 @@ export function App() {
     }).catch(() => setChildSessions([]))
   }, [activeRootId, activeProjectId, activeSessionId])
 
+  // Restore from URL hash or auto-select most recent session on first load
+  useEffect(() => {
+    if (initializedRef.current || roots.length === 0) return
+    initializedRef.current = true
+
+    const { rootId, projectId, sessionId } = parseHash()
+    if (rootId && projectId && sessionId) {
+      setActiveRootId(rootId)
+      setActiveProjectId(projectId)
+      setActiveSessionId(sessionId)
+      load(rootId, projectId, sessionId)
+      return
+    }
+
+    // No hash — auto-select the most recent session
+    ;(async () => {
+      for (const root of roots) {
+        try {
+          const projects = await api.getProjects(root.id)
+          projects.sort((a, b) => {
+            if (a.lastActivity && b.lastActivity) return b.lastActivity.localeCompare(a.lastActivity)
+            if (a.lastActivity) return -1
+            if (b.lastActivity) return 1
+            return 0
+          })
+          for (const project of projects) {
+            const sessions = await api.getSessions(root.id, project.id)
+            const topSession = sessions
+              .filter(s => !s.isSubAgent)
+              .sort((a, b) => {
+                const ta = a.lastTimestamp ?? a.timestamp
+                const tb = b.lastTimestamp ?? b.timestamp
+                if (ta && tb) return tb.localeCompare(ta)
+                if (ta) return -1
+                if (tb) return 1
+                return 0
+              })[0]
+            if (topSession) {
+              setActiveRootId(root.id)
+              setActiveProjectId(project.id)
+              setActiveSessionId(topSession.id)
+              load(root.id, project.id, topSession.id)
+              updateHash(root.id, project.id, topSession.id)
+              return
+            }
+          }
+        } catch { /* skip root */ }
+      }
+    })()
+  }, [roots, load])
+
   const handleSelectSession = useCallback((rootId: string, projectId: string, sessionId: string) => {
     setActiveRootId(rootId)
     setActiveProjectId(projectId)
@@ -71,6 +141,7 @@ export function App() {
     subClear()
     if (!compareMode) {
       load(rootId, projectId, sessionId)
+      updateHash(rootId, projectId, sessionId)
     }
   }, [compareMode, load, subClear])
 
@@ -236,14 +307,12 @@ export function App() {
           <CompareView
             selections={compareSelections}
             onRemoveSelection={handleRemoveCompareSelection}
-            onExport={() => setShowExport(true)}
           />
         ) : (
           <ConversationViewer
             conversation={conversation}
             loading={loading}
             error={error}
-            onExport={conversation ? () => setShowExport(true) : undefined}
             childSessions={childSessions}
             activeSubAgentId={activeSubAgentId}
             subConversation={subConversation}
@@ -258,17 +327,6 @@ export function App() {
           />
         )}
       </main>
-
-      {showExport && activeRootId && (
-        <ExportDialog
-          rootId={activeRootId}
-          projectId={activeProjectId ?? undefined}
-          sessionIds={compareMode
-            ? compareSelections.map(s => s.sessionId)
-            : activeSessionId ? [activeSessionId] : undefined}
-          onClose={() => setShowExport(false)}
-        />
-      )}
 
       {moveDialog && (
         <MoveDialog

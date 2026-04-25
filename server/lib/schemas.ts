@@ -64,12 +64,15 @@ const BaseFields = {
   isSidechain: z.boolean().optional(),
 }
 
+// User messages can include image blocks and other types not in the assistant schema
+const AnyContentBlockSchema = z.object({ type: z.string() }).passthrough()
+
 export const UserRecordSchema = z.object({
   ...BaseFields,
   type: z.literal('user'),
   message: z.object({
     role: z.literal('user'),
-    content: z.union([z.string(), z.array(ContentBlockSchema)]),
+    content: z.union([z.string(), z.array(AnyContentBlockSchema)]),
   }),
 })
 

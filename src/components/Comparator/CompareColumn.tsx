@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { Cross2Icon } from '@radix-ui/react-icons'
 import type { ParsedConversation, NormalizedMessage } from '../../types.js'
 import { MessageBubble } from '../Viewer/MessageBubble.js'
 import { CheckpointGroup } from '../Viewer/CheckpointGroup.js'
@@ -87,7 +88,7 @@ export function CompareColumn({ conversation, onRemove }: CompareColumnProps) {
     <div className="compare-column">
       <div className="compare-column-header">
         <h3 className="compare-column-title" title={title}>{title}</h3>
-        <button className="compare-remove-btn" onClick={onRemove}>&times;</button>
+        <button className="compare-remove-btn" onClick={onRemove}><Cross2Icon width={12} height={12} /></button>
       </div>
       <div className="compare-column-meta">
         <Badge label="Model" value={metadata.model?.replace('claude-', '').replace(/-\d{8}$/, '')} />
@@ -109,7 +110,6 @@ export function CompareColumn({ conversation, onRemove }: CompareColumnProps) {
             finalResponse={cp.finalResponse}
             trailing={cp.trailing}
             defaultExpanded={cp.index === checkpoints.length}
-            viewMode="compact"
           />
         ))}
       </div>

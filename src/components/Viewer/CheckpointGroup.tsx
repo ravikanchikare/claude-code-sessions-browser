@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { ChevronDownIcon } from '@radix-ui/react-icons'
 import type { NormalizedMessage } from '../../types.js'
 import { MessageBubble } from './MessageBubble.js'
 import { ToolCallGroup } from './ToolCallGroup.js'
@@ -10,7 +11,6 @@ interface CheckpointGroupProps {
   finalResponse: NormalizedMessage | null
   trailing: NormalizedMessage[]
   defaultExpanded: boolean
-  viewMode: 'compact' | 'detailed'
   onAgentClick?: (description: string) => void
   onRewind?: (uuid: string) => void
   onBranch?: (uuid: string) => void
@@ -44,22 +44,15 @@ function isToolOnlyMessage(msg: NormalizedMessage): boolean {
 
 export function CheckpointGroup({
   checkpointIndex, userMessage, intermediates, finalResponse, trailing,
-  defaultExpanded, viewMode, onAgentClick, onRewind, onBranch,
+  defaultExpanded, onAgentClick, onRewind, onBranch,
 }: CheckpointGroupProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const summary = userMessage.content.trim().split('\n')[0].slice(0, 80)
   const time = formatFriendlyTime(userMessage.timestamp)
 
-  // Group consecutive tool-only intermediates in compact mode
+  // Group consecutive non-agent tool-only intermediates into ToolCallGroup batches
   const renderIntermediates = () => {
-    if (viewMode === 'detailed') {
-      return intermediates.map((msg, i) => (
-        <MessageBubble key={msg.uuid ?? `int-${i}`} message={msg} onAgentClick={onAgentClick} />
-      ))
-    }
-
-    // Compact: group consecutive non-agent tool-only messages
     const items: React.ReactNode[] = []
     let toolBatch: NormalizedMessage[] = []
 
@@ -88,7 +81,7 @@ export function CheckpointGroup({
   return (
     <div className="checkpoint-group">
       <div className="checkpoint-header" onClick={() => setExpanded(!expanded)}>
-        <span className={`checkpoint-chevron ${expanded ? '' : 'collapsed'}`}>&#9660;</span>
+        <span className={`checkpoint-chevron ${expanded ? '' : 'collapsed'}`}><ChevronDownIcon width={11} height={11} /></span>
         <span className="checkpoint-index">#{checkpointIndex}</span>
         <span className="checkpoint-summary">{summary || 'Untitled checkpoint'}</span>
         <div className="checkpoint-actions">

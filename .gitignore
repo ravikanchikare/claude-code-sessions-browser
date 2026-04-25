@@ -7,3 +7,5 @@ build/
 .vite/
 .playwright-mcp/
 .DS_Store
+exported-md/
+scripts/.venv/

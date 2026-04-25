@@ -13,6 +13,7 @@ export interface ProjectInfo {
   id: string          // sanitized dir name
   displayName: string // best-effort decoded path
   sessionCount: number
+  lastActivity: string | null  // ISO timestamp of most recently modified session
 }
 
 export interface SessionInfo {
@@ -190,10 +191,17 @@ export async function listProjects(rootPath: string): Promise<ProjectInfo[]> {
 
       const projDir = join(projectsDir, entry.name)
       let sessionCount = 0
+      let lastActivity: string | null = null
       try {
         const files = await readdir(projDir)
-        // Count only parent (UUID-named) sessions, not agent-*.jsonl files
-        sessionCount = files.filter(f => f.endsWith('.jsonl') && UUID_RE.test(f.replace('.jsonl', ''))).length
+        const sessionFiles = files.filter(f => f.endsWith('.jsonl') && UUID_RE.test(f.replace('.jsonl', '')))
+        sessionCount = sessionFiles.length
+        // Find most recently modified session file (cheap stat, no reading)
+        const mtimes = await Promise.all(
+          sessionFiles.map(f => fsStat(join(projDir, f)).then(s => s.mtimeMs).catch(() => 0))
+        )
+        const maxMtime = Math.max(0, ...mtimes)
+        if (maxMtime > 0) lastActivity = new Date(maxMtime).toISOString()
       } catch { /* skip unreadable */ }
 
       if (sessionCount === 0) continue
@@ -202,10 +210,63 @@ export async function listProjects(rootPath: string): Promise<ProjectInfo[]> {
         id: entry.name,
         displayName: decodeProjectName(entry.name),
         sessionCount,
+        lastActivity,
       })
     }
 
-    return projects.sort((a, b) => a.displayName.localeCompare(b.displayName))
+    // Sort by most recent activity first (nulls last)
+    return projects.sort((a, b) => {
+      if (a.lastActivity && b.lastActivity) return b.lastActivity.localeCompare(a.lastActivity)
+      if (a.lastActivity) return -1
+      if (b.lastActivity) return 1
+      return a.displayName.localeCompare(b.displayName)
+    })
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Every subdirectory under `{root}/projects/`, including folders with no UUID `*.jsonl`
+ * at the project root (those are omitted from {@link listProjects}).
+ */
+export async function listProjectFolders(rootPath: string): Promise<ProjectInfo[]> {
+  const projectsDir = join(rootPath, 'projects')
+  try {
+    const entries = await readdir(projectsDir, { withFileTypes: true })
+    const projects: ProjectInfo[] = []
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+
+      const projDir = join(projectsDir, entry.name)
+      let sessionCount = 0
+      let lastActivity: string | null = null
+      try {
+        const files = await readdir(projDir)
+        const sessionFiles = files.filter(f => f.endsWith('.jsonl') && UUID_RE.test(f.replace('.jsonl', '')))
+        sessionCount = sessionFiles.length
+        const mtimes = await Promise.all(
+          sessionFiles.map(f => fsStat(join(projDir, f)).then(s => s.mtimeMs).catch(() => 0))
+        )
+        const maxMtime = Math.max(0, ...mtimes)
+        if (maxMtime > 0) lastActivity = new Date(maxMtime).toISOString()
+      } catch { /* skip unreadable */ }
+
+      projects.push({
+        id: entry.name,
+        displayName: decodeProjectName(entry.name),
+        sessionCount,
+        lastActivity,
+      })
+    }
+
+    return projects.sort((a, b) => {
+      if (a.lastActivity && b.lastActivity) return b.lastActivity.localeCompare(a.lastActivity)
+      if (a.lastActivity) return -1
+      if (b.lastActivity) return 1
+      return a.displayName.localeCompare(b.displayName)
+    })
   } catch {
     return []
   }

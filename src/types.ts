@@ -8,6 +8,7 @@ export interface ProjectInfo {
   id: string
   displayName: string
   sessionCount: number
+  lastActivity: string | null
 }
 
 export interface SessionInfo {
@@ -31,6 +32,13 @@ export interface SessionInfo {
   childSessionIds: string[]
 }
 
+export interface Attachment {
+  type: string       // e.g. "image"
+  mediaType?: string // e.g. "image/png"
+  fileName?: string  // e.g. "clipboard-2026-04-14.png"
+  source?: string    // full path or URL
+}
+
 export interface NormalizedMessage {
   type: 'user' | 'assistant' | 'system' | 'summary'
   uuid?: string
@@ -49,6 +57,7 @@ export interface NormalizedMessage {
   stopReason?: string | null
   parentUuid?: string | null
   messageIndex?: number
+  attachments?: Attachment[]
 }
 
 export interface ParsedConversation {

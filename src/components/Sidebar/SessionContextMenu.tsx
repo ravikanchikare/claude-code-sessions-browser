@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react'
+import { Pencil1Icon, EnterIcon, CheckboxIcon, SquareIcon, TrashIcon, ClipboardIcon } from '@radix-ui/react-icons'
 
 interface SessionContextMenuProps {
   onRename?: () => void
   onMove?: () => void
-  onDelete: () => void
+  onCopyTranscript?: () => void | Promise<void>
+  onDelete?: () => void
   compareMode: boolean
   isCompareSelected: boolean
   onCompareToggle: () => void
@@ -11,7 +13,7 @@ interface SessionContextMenuProps {
 }
 
 export function SessionContextMenu({
-  onRename, onMove, onDelete, compareMode, isCompareSelected, onCompareToggle, onClose,
+  onRename, onMove, onCopyTranscript, onDelete, compareMode, isCompareSelected, onCompareToggle, onClose,
 }: SessionContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -46,24 +48,39 @@ export function SessionContextMenu({
     <div className="context-menu" ref={menuRef}>
       {onRename && (
         <button className="context-menu-item" onClick={(e) => { e.stopPropagation(); onRename(); onClose() }}>
-          <span className="context-menu-icon">&#9998;</span> Rename
+          <span className="context-menu-icon"><Pencil1Icon width={13} height={13} /></span> Rename
         </button>
       )}
       {onMove && (
         <button className="context-menu-item" onClick={(e) => { e.stopPropagation(); onMove(); onClose() }}>
-          <span className="context-menu-icon">&#8644;</span> Move
+          <span className="context-menu-icon"><EnterIcon width={13} height={13} /></span> Move
+        </button>
+      )}
+      {onCopyTranscript && (
+        <button
+          className="context-menu-item"
+          onClick={(e) => {
+            e.stopPropagation()
+            void Promise.resolve(onCopyTranscript()).finally(() => onClose())
+          }}
+        >
+          <span className="context-menu-icon"><ClipboardIcon width={13} height={13} /></span> Copy transcript
         </button>
       )}
       {compareMode && (
         <button className="context-menu-item" onClick={(e) => { e.stopPropagation(); onCompareToggle(); onClose() }}>
-          <span className="context-menu-icon">{isCompareSelected ? '\u2611' : '\u2610'}</span>
+          <span className="context-menu-icon">{isCompareSelected ? <CheckboxIcon width={13} height={13} /> : <SquareIcon width={13} height={13} />}</span>
           {isCompareSelected ? 'Remove from compare' : 'Add to compare'}
         </button>
       )}
-      <div className="context-menu-sep" />
-      <button className="context-menu-item context-menu-danger" onClick={(e) => { e.stopPropagation(); onDelete(); onClose() }}>
-        <span className="context-menu-icon">&#10005;</span> Delete
-      </button>
+      {onDelete && (
+        <>
+          <div className="context-menu-sep" />
+          <button className="context-menu-item context-menu-danger" onClick={(e) => { e.stopPropagation(); onDelete(); onClose() }}>
+            <span className="context-menu-icon"><TrashIcon width={13} height={13} /></span> Delete
+          </button>
+        </>
+      )}
     </div>
   )
 }

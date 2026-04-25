@@ -1,7 +1,7 @@
 {
   "name": "claude-session-browser",
   "version": "0.1.0",
-  "description": "Browse, compare, and export Claude Code conversation logs",
+  "description": "Browse, compare, and copy transcripts of Claude Code conversation logs",
   "type": "module",
   "bin": {
     "claude-session-browser": "./build/bin/cli.js"
@@ -10,6 +10,9 @@
     "dev": "tsx bin/cli.ts",
     "build": "vite build && tsc -p tsconfig.build.json",
     "start": "node build/bin/cli.js",
+    "export-md": "tsx scripts/export-project-sessions-md.ts",
+    "list-projects": "tsx scripts/export-project-sessions-md.ts --list-projects",
+    "count-tokens": "bash scripts/run-count-tokens.sh",
     "prepublishOnly": "npm run build"
   },
   "files": [
@@ -30,6 +33,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@radix-ui/react-icons": "^1.3.2",
     "express": "^4.21.0",
     "marked": "^15.0.0",
     "open": "^10.1.0",

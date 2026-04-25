@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 import type { NormalizedMessage } from '../../types.js'
 
 interface ToolCallGroupProps {
@@ -44,7 +45,7 @@ export function ToolCallGroup({ messages }: ToolCallGroupProps) {
         ))}
       </div>
       <button className="toggle-btn toggle-btn-small" onClick={() => setExpanded(!expanded)}>
-        {expanded ? '\u25BC' : '\u25B6'} Details
+        {expanded ? <ChevronDownIcon width={11} height={11} /> : <ChevronRightIcon width={11} height={11} />} Details
       </button>
       {expanded && (
         <div className="tool-call-group-details">

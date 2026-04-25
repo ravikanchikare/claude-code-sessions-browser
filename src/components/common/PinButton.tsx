@@ -1,4 +1,5 @@
 import React from 'react'
+import { DrawingPinFilledIcon, DrawingPinIcon } from '@radix-ui/react-icons'
 
 interface PinButtonProps {
   pinned: boolean
@@ -12,7 +13,7 @@ export function PinButton({ pinned, onToggle }: PinButtonProps) {
       onClick={(e) => { e.stopPropagation(); onToggle() }}
       title={pinned ? 'Unpin project' : 'Pin project'}
     >
-      {pinned ? '\u25C9' : '\u25CB'}
+      {pinned ? <DrawingPinFilledIcon width={13} height={13} /> : <DrawingPinIcon width={13} height={13} />}
     </button>
   )
 }

@@ -1,16 +1,14 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { Pencil1Icon, ClipboardIcon, Cross2Icon } from '@radix-ui/react-icons'
 import type { ParsedConversation, NormalizedMessage, SessionInfo } from '../../types.js'
-import { MessageBubble } from './MessageBubble.js'
-import { CheckpointGroup } from './CheckpointGroup.js'
-import { DateGroup } from './DateGroup.js'
-import { ControlBar } from './ControlBar.js'
+import { formatTurnPairCopy, formatFullSessionTranscript, filterMessagesForTranscript } from '../../lib/turnPairCopy.js'
+import { TurnRow } from './TurnRow.js'
 import { Badge } from '../common/Badge.js'
 
 interface ConversationViewerProps {
   conversation: ParsedConversation | null
   loading: boolean
   error: string | null
-  onExport?: () => void
   // Sub-agent support
   childSessions?: SessionInfo[]
   activeSubAgentId?: string | null
@@ -33,10 +31,6 @@ function formatDate(ts: string | null): string {
   } catch { return '' }
 }
 
-function isToolOnlyMessage(msg: NormalizedMessage): boolean {
-  return msg.type === 'assistant' && !msg.content.trim() && (msg.toolCalls?.length ?? 0) > 0
-}
-
 interface CheckpointData {
   index: number
   userMessage: NormalizedMessage
@@ -45,6 +39,23 @@ interface CheckpointData {
   trailing: NormalizedMessage[]
 }
 
+/** If the turn never got an assistant with stopReason end_turn, treat the last assistant as the pair end (legacy / incomplete data). */
+function promoteLastAssistantIfNoFinal(c: CheckpointData) {
+  if (c.finalResponse) return
+  for (let i = c.intermediates.length - 1; i >= 0; i--) {
+    const m = c.intermediates[i]
+    if (m.type === 'assistant') {
+      c.finalResponse = m
+      c.intermediates.splice(i, 1)
+      break
+    }
+  }
+}
+
+/**
+ * turn_pair: one user message through the assistant’s closing message with stopReason "end_turn"
+ * (or the last assistant in the segment when end_turn is absent).
+ */
 function buildCheckpoints(messages: NormalizedMessage[]): { orphans: NormalizedMessage[]; checkpoints: CheckpointData[] } {
   const orphans: NormalizedMessage[] = []
   const checkpoints: CheckpointData[] = []
@@ -52,23 +63,37 @@ function buildCheckpoints(messages: NormalizedMessage[]): { orphans: NormalizedM
   let idx = 0
 
   const flush = () => {
-    if (current) checkpoints.push(current)
+    if (current) {
+      promoteLastAssistantIfNoFinal(current)
+      checkpoints.push(current)
+    }
     current = null
   }
 
   for (const msg of messages) {
     if (msg.type === 'user') {
-      flush()
-      idx++
-      current = { index: idx, userMessage: msg, intermediates: [], finalResponse: null, trailing: [] }
+      // Merge consecutive user messages (e.g., images + text sent together)
+      if (current && !current.finalResponse && current.intermediates.length === 0 && current.trailing.length === 0) {
+        const mergedAttachments = [...(current.userMessage.attachments ?? []), ...(msg.attachments ?? [])]
+        current.userMessage = {
+          ...current.userMessage,
+          content: [current.userMessage.content, msg.content].filter(Boolean).join('\n'),
+          attachments: mergedAttachments.length > 0 ? mergedAttachments : undefined,
+        }
+      } else {
+        flush()
+        idx++
+        current = { index: idx, userMessage: msg, intermediates: [], finalResponse: null, trailing: [] }
+      }
     } else if (current) {
       if (current.finalResponse) {
-        // Already have a final response — additional messages go to trailing
         current.trailing.push(msg)
-      } else if (isToolOnlyMessage(msg)) {
-        current.intermediates.push(msg)
       } else if (msg.type === 'assistant') {
-        current.finalResponse = msg
+        if (msg.stopReason === 'end_turn') {
+          current.finalResponse = msg
+        } else {
+          current.intermediates.push(msg)
+        }
       } else {
         current.trailing.push(msg)
       }
@@ -78,62 +103,6 @@ function buildCheckpoints(messages: NormalizedMessage[]): { orphans: NormalizedM
   }
   flush()
   return { orphans, checkpoints }
-}
-
-const DATE_BUCKET_ORDER = ['Last few hours', 'Today', 'Yesterday', 'This week', 'Older'] as const
-
-function getDateBucket(timestamp: string | undefined): string {
-  if (!timestamp) return 'Older'
-  const now = new Date()
-  const date = new Date(timestamp)
-  const hoursAgo = (now.getTime() - date.getTime()) / 3_600_000
-
-  if (hoursAgo < 3) return 'Last few hours'
-
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  if (date >= todayStart) return 'Today'
-
-  const yesterdayStart = new Date(todayStart)
-  yesterdayStart.setDate(yesterdayStart.getDate() - 1)
-  if (date >= yesterdayStart) return 'Yesterday'
-
-  const weekStart = new Date(todayStart)
-  weekStart.setDate(weekStart.getDate() - todayStart.getDay())
-  if (date >= weekStart) return 'This week'
-
-  return 'Older'
-}
-
-interface DateBucket {
-  label: string
-  checkpoints: CheckpointData[]
-}
-
-function groupByDate(checkpoints: CheckpointData[]): DateBucket[] {
-  const bucketMap = new Map<string, CheckpointData[]>()
-  for (const cp of checkpoints) {
-    const label = getDateBucket(cp.userMessage.timestamp)
-    const arr = bucketMap.get(label) ?? []
-    arr.push(cp)
-    bucketMap.set(label, arr)
-  }
-  // Return in canonical order, skipping empty buckets
-  return DATE_BUCKET_ORDER
-    .filter(label => bucketMap.has(label))
-    .map(label => ({ label, checkpoints: bucketMap.get(label)! }))
-}
-
-function filterMessages(messages: NormalizedMessage[], viewMode: 'compact' | 'detailed'): NormalizedMessage[] {
-  if (viewMode === 'detailed') return messages
-  return messages.filter(msg => {
-    if (msg.type === 'assistant' && !msg.content.trim() && !(msg.toolCalls?.length)) return false
-    if (msg.type === 'user') {
-      const trimmed = msg.content.trim()
-      if (trimmed.startsWith('<') && /<\/[a-zA-Z][a-zA-Z0-9-]*>\s*$/.test(trimmed)) return false
-      if (trimmed.toLowerCase().startsWith('caviat')) return false
-    }
-    return true
-  })
 }
 
 function EditableTitle({ title, onRename, editTrigger }: { title: string; onRename?: (newTitle: string) => Promise<void>; editTrigger?: number }) {
@@ -172,83 +141,84 @@ function EditableTitle({ title, onRename, editTrigger }: { title: string; onRena
     <h2 className="viewer-title">
       {title}
       {onRename && (
-        <span className="title-edit-icon" onClick={() => setEditing(true)} title="Rename session">&#9998;</span>
+        <span className="title-edit-icon" onClick={() => setEditing(true)} title="Rename session"><Pencil1Icon width={13} height={13} /></span>
       )}
     </h2>
   )
 }
 
-function MessagesPane({ conversation, viewMode, sortOrder, onAgentClick, onRewind, onBranch }: {
+function ResumeCmd({ sessionId }: { sessionId: string }) {
+  const [copied, setCopied] = useState(false)
+  const cmd = `claude -r ${sessionId}`
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(cmd)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [cmd])
+
+  return (
+    <div
+      className={`resume-cmd ${copied ? 'resume-cmd-copied' : ''}`}
+      onClick={handleCopy}
+      title="Click to copy resume command"
+    >
+      {copied ? 'Copied!' : cmd}
+      {!copied && <span className="copy-icon"><ClipboardIcon width={13} height={13} /></span>}
+    </div>
+  )
+}
+
+function TurnList({ conversation, onAgentClick, onRewind, onBranch }: {
   conversation: ParsedConversation
-  viewMode: 'compact' | 'detailed'
-  sortOrder: 'oldest' | 'newest'
   onAgentClick?: (description: string) => void
   onRewind?: (uuid: string) => void
   onBranch?: (uuid: string) => void
 }) {
-  const filteredMessages = filterMessages(conversation.messages, viewMode)
-  const { orphans, checkpoints } = useMemo(() => buildCheckpoints(filteredMessages), [filteredMessages])
-  const dateBuckets = useMemo(() => groupByDate(checkpoints), [checkpoints])
+  const filtered = filterMessagesForTranscript(conversation.messages)
+  const { orphans, checkpoints } = useMemo(() => buildCheckpoints(filtered), [filtered])
 
-  const orderedBuckets = sortOrder === 'newest' ? [...dateBuckets].reverse() : dateBuckets
-
-  const renderCheckpoint = (cp: CheckpointData) => (
-    <CheckpointGroup
-      key={cp.userMessage.uuid ?? `cp-${cp.index}`}
-      checkpointIndex={cp.index}
-      userMessage={cp.userMessage}
-      intermediates={cp.intermediates}
-      finalResponse={cp.finalResponse}
-      trailing={cp.trailing}
-      defaultExpanded={cp.index === checkpoints.length}
-      viewMode={viewMode}
-      onAgentClick={onAgentClick}
-      onRewind={onRewind}
-      onBranch={onBranch}
-    />
-  )
+  // Newest first
+  const reversed = useMemo(() => [...checkpoints].reverse(), [checkpoints])
 
   return (
     <div className="viewer-messages">
-      {sortOrder === 'oldest' && orphans.map((msg, i) => (
-        <MessageBubble key={msg.uuid ?? `orphan-${i}`} message={msg} />
+      {reversed.map((cp, idx) => (
+        <TurnRow
+          key={cp.userMessage.uuid ?? `cp-${cp.index}`}
+          index={cp.index}
+          userMessage={cp.userMessage}
+          intermediates={cp.intermediates}
+          finalResponse={cp.finalResponse}
+          trailing={cp.trailing}
+          turnCopyText={formatTurnPairCopy(cp.userMessage, cp.intermediates, cp.finalResponse)}
+          defaultExpanded={false}
+          isLatest={idx === 0}
+          onAgentClick={onAgentClick}
+          onRewind={onRewind}
+          onBranch={onBranch}
+        />
       ))}
-      {orderedBuckets.map(bucket => {
-        const cps = sortOrder === 'newest' ? [...bucket.checkpoints].reverse() : bucket.checkpoints
-        const hasRecentBucket = orderedBuckets.some(b => b.label === 'Last few hours')
-        const isRecent = bucket.label === 'Last few hours' || bucket.label === 'Today'
-        const shouldExpand = isRecent || (!hasRecentBucket && bucket.label === 'Older')
-        return (
-          <DateGroup key={bucket.label} label={bucket.label} defaultExpanded={shouldExpand}>
-            {cps.map(renderCheckpoint)}
-          </DateGroup>
-        )
-      })}
-      {sortOrder === 'newest' && orphans.map((msg, i) => (
-        <MessageBubble key={msg.uuid ?? `orphan-${i}`} message={msg} />
+      {orphans.map((msg, i) => (
+        <div key={msg.uuid ?? `orphan-${i}`} className="turn-orphan">
+          <span className="turn-orphan-text">{msg.content}</span>
+        </div>
       ))}
     </div>
   )
 }
 
 export function ConversationViewer({
-  conversation, loading, error, onExport,
+  conversation, loading, error,
   childSessions, activeSubAgentId,
   subConversation, subLoading, subError,
   onSelectSubAgent, onCloseSubAgent,
   onRename, renameRequested, onRewind, onBranch,
 }: ConversationViewerProps) {
-  const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact')
-  const [sortOrder, setSortOrder] = useState<'oldest' | 'newest'>('oldest')
-
-  // Build description -> childSessionId mapping
   const descriptionToChild = useMemo(() => {
     const map = new Map<string, string>()
     if (childSessions) {
       for (const child of childSessions) {
-        if (child.agentDescription) {
-          map.set(child.agentDescription, child.id)
-        }
+        if (child.agentDescription) map.set(child.agentDescription, child.id)
       }
     }
     return map
@@ -258,23 +228,21 @@ export function ConversationViewer({
     if (!onSelectSubAgent || !childSessions?.length) return undefined
     return (description: string) => {
       const childId = descriptionToChild.get(description)
-      if (childId) {
-        onSelectSubAgent(childId)
-      }
+      if (childId) onSelectSubAgent(childId)
     }
   }, [onSelectSubAgent, childSessions, descriptionToChild])
 
-  if (loading) {
-    return <div className="viewer-empty">Loading conversation...</div>
-  }
+  const sessionTranscriptText = useMemo(
+    () => formatFullSessionTranscript(conversation?.messages ?? []),
+    [conversation],
+  )
+  const handleCopySessionTranscript = useCallback(() => {
+    void navigator.clipboard.writeText(sessionTranscriptText)
+  }, [sessionTranscriptText])
 
-  if (error) {
-    return <div className="viewer-empty viewer-error">{error}</div>
-  }
-
-  if (!conversation) {
-    return <div className="viewer-empty">Select a session to view its conversation</div>
-  }
+  if (loading) return <div className="viewer-empty">Loading conversation...</div>
+  if (error) return <div className="viewer-empty viewer-error">{error}</div>
+  if (!conversation) return <div className="viewer-empty">Select a session to view its conversation</div>
 
   const { metadata, messages, customTitle } = conversation
   const title = customTitle ?? messages.find(m => {
@@ -284,52 +252,66 @@ export function ConversationViewer({
     if (t.toLowerCase().startsWith('caviat')) return false
     return true
   })?.content.slice(0, 100) ?? 'Untitled'
+
   const userMessages = messages.filter(m => m.type === 'user').length
   const assistantMessages = messages.filter(m => m.type === 'assistant').length
 
   const hasSubAgent = activeSubAgentId != null
-
-  // Find the active sub-agent's description for the panel title
   const activeSubAgent = childSessions?.find(c => c.id === activeSubAgentId)
   const subAgentTitle = activeSubAgent?.agentDescription ?? activeSubAgent?.agentId ?? 'Sub-agent'
 
   return (
     <div className="viewer">
       <div className="viewer-header">
-        <EditableTitle title={title} onRename={onRename} editTrigger={renameRequested} />
+        <div className="viewer-header-top">
+          <EditableTitle title={title} onRename={onRename} editTrigger={renameRequested} />
+          <div className="viewer-header-actions">
+            <ResumeCmd sessionId={conversation.sessionId} />
+            <button
+              type="button"
+              className="viewer-icon-btn"
+              onClick={handleCopySessionTranscript}
+              aria-label="Copy transcript"
+              title="Copy full session transcript (User / Claude / Claude Summary, chronological order)"
+            >
+              <ClipboardIcon width={14} height={14} />
+            </button>
+          </div>
+        </div>
         <div className="viewer-meta">
-          <Badge label="Model" value={metadata.model?.replace('claude-', '').replace(/-\d{8}$/, '')} />
-          <Badge label="Branch" value={metadata.gitBranch} />
-          <Badge label="Version" value={metadata.version} />
-          <Badge label="Started" value={formatDate(metadata.firstTimestamp)} />
-          <Badge label="Messages" value={`${userMessages}u / ${assistantMessages}a`} />
-          <Badge label="Tokens" value={metadata.totalInputTokens ? `${metadata.totalInputTokens.toLocaleString()} in / ${metadata.totalOutputTokens.toLocaleString()} out` : null} />
+          <div className="viewer-meta-left">
+            <Badge label="Model" value={metadata.model?.replace('claude-', '').replace(/-\d{8}$/, '')} className="badge-model" />
+            <Badge label="Messages" value={`${userMessages}u / ${assistantMessages}a`} className="badge-messages" />
+            <Badge label="Tokens" value={metadata.totalInputTokens ? `${metadata.totalInputTokens.toLocaleString()} in / ${metadata.totalOutputTokens.toLocaleString()} out` : null} className="badge-tokens" />
+          </div>
+          <div className="viewer-meta-right">
+            <Badge label="Branch" value={metadata.gitBranch} />
+            <Badge label="Version" value={metadata.version} />
+            <Badge label="Last active" value={formatDate(metadata.lastTimestamp)} />
+          </div>
         </div>
       </div>
-      <ControlBar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        sortOrder={sortOrder}
-        onSortOrderChange={setSortOrder}
-        sessionId={conversation.sessionId}
-        onExport={onExport}
-      />
       <div className="viewer-body">
         <div className={`viewer-body-main ${hasSubAgent ? 'viewer-body-main-split' : ''}`}>
-          <MessagesPane conversation={conversation} viewMode={viewMode} sortOrder={sortOrder} onAgentClick={handleAgentClick} onRewind={onRewind} onBranch={onBranch} />
+          <TurnList
+            conversation={conversation}
+            onAgentClick={handleAgentClick}
+            onRewind={onRewind}
+            onBranch={onBranch}
+          />
         </div>
         {hasSubAgent && (
           <div className="viewer-body-sub">
             <div className="subagent-panel-header">
               <span className="subagent-panel-title">{subAgentTitle}</span>
-              <button className="subagent-close-btn" onClick={onCloseSubAgent} title="Close sub-agent panel">&times;</button>
+              <button className="subagent-close-btn" onClick={onCloseSubAgent} title="Close sub-agent panel"><Cross2Icon width={12} height={12} /></button>
             </div>
             {subLoading ? (
               <div className="viewer-empty">Loading sub-agent...</div>
             ) : subError ? (
               <div className="viewer-empty viewer-error">{subError}</div>
             ) : subConversation ? (
-              <MessagesPane conversation={subConversation} viewMode={viewMode} sortOrder={sortOrder} />
+              <TurnList conversation={subConversation} />
             ) : (
               <div className="viewer-empty">Select a sub-agent</div>
             )}

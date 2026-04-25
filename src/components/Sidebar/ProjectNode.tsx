@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { ChevronDownIcon, ChevronRightIcon, DotsVerticalIcon, EnterIcon } from '@radix-ui/react-icons'
 import type { ProjectInfo, SessionInfo } from '../../types.js'
 import { PinButton } from '../common/PinButton.js'
 import { SessionNode } from './SessionNode.js'
@@ -34,7 +35,7 @@ function ProjectContextMenu({ onMoveProject, onClose }: { onMoveProject: () => v
   return (
     <div className="context-menu" ref={menuRef}>
       <button className="context-menu-item" onClick={(e) => { e.stopPropagation(); onMoveProject(); onClose() }}>
-        <span className="context-menu-icon">&#8644;</span> Move to&hellip;
+        <span className="context-menu-icon"><EnterIcon width={13} height={13} /></span> Move to&hellip;
       </button>
     </div>
   )
@@ -68,6 +69,13 @@ export function ProjectNode({
   const [expanded, setExpanded] = useState(false)
   const [sessions, setSessions] = useState<SessionInfo[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Auto-expand when this project contains the active session
+  useEffect(() => {
+    if (activeSessionId && !expanded) {
+      setExpanded(true)
+    }
+  }, [activeSessionId])
 
   useEffect(() => {
     if (!expanded) return
@@ -121,8 +129,17 @@ export function ProjectNode({
       })
     }
 
-    // Top-level: non-sub-agent sessions (or orphan agents with no parent in this list)
-    const topLevel = sessions.filter(s => !subAgentIds.has(s.id))
+    // Top-level: non-sub-agent sessions, sorted by most recent activity first
+    const topLevel = sessions
+      .filter(s => !subAgentIds.has(s.id))
+      .sort((a, b) => {
+        const ta = a.lastTimestamp ?? a.timestamp
+        const tb = b.lastTimestamp ?? b.timestamp
+        if (ta && tb) return tb.localeCompare(ta)
+        if (ta) return -1
+        if (tb) return 1
+        return 0
+      })
 
     return { topLevel, childMap }
   }, [sessions])
@@ -134,7 +151,7 @@ export function ProjectNode({
   return (
     <div className={`project-node ${isPinned ? 'pinned' : ''}`}>
       <div className="project-header" onClick={() => setExpanded(!expanded)}>
-        <span className="expand-icon">{expanded ? '\u25BC' : '\u25B6'}</span>
+        <span className="expand-icon">{expanded ? <ChevronDownIcon width={10} height={10} /> : <ChevronRightIcon width={10} height={10} />}</span>
         <PinButton pinned={isPinned} onToggle={onTogglePin} />
         <span className="project-name" title={project.displayName}>{shortName}</span>
         <span className="session-count">{project.sessionCount}</span>
@@ -144,7 +161,7 @@ export function ProjectNode({
               className="project-menu-btn"
               onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
               title="Project actions"
-            >&#8942;</button>
+            ><DotsVerticalIcon width={13} height={13} /></button>
             {menuOpen && (
               <ProjectContextMenu onMoveProject={onMoveProject} onClose={() => setMenuOpen(false)} />
             )}
@@ -157,12 +174,13 @@ export function ProjectNode({
           {topLevel.map(session => (
             <SessionNode
               key={session.id}
+              rootId={rootId}
+              projectId={project.id}
               session={session}
               childSessions={childMap.get(session.id) ?? []}
               isActive={session.id === activeSessionId}
               isCompareSelected={compareSelections.has(session.id)}
               compareMode={compareMode}
-              activeSessionId={activeSessionId}
               activeSubAgentId={activeSubAgentId}
               onSelect={() => onSelectSession(session.id)}
               onSelectChild={(childId) => onSelectSubAgent(session.id, childId)}

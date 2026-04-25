@@ -5,7 +5,6 @@ import rootsRouter from './routes/roots.js'
 import projectsRouter from './routes/projects.js'
 import sessionsRouter from './routes/sessions.js'
 import messagesRouter from './routes/messages.js'
-import exportRouter from './routes/export.js'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
@@ -19,7 +18,6 @@ export function createApp(): express.Application {
   app.use('/api/roots', projectsRouter)
   app.use('/api/roots', sessionsRouter)
   app.use('/api/roots', messagesRouter)
-  app.use('/api/export', exportRouter)
 
   return app
 }
@@ -32,8 +30,10 @@ export async function startServer(port: number, isDev: boolean): Promise<void> {
     // The Express server only serves API routes
     // Vite proxies /api requests to this Express server
   } else {
-    // In production, serve the built Vite output
-    const distPath = resolve(__dirname, '..', '..', 'dist')
+    // In production, serve the built Vite output.
+    // tsx runs from server/ (../dist); compiled build/server/index.js needs ../../dist.
+    const isCompiledUnderBuild = /[/\\]build[/\\]server$/.test(__dirname)
+    const distPath = resolve(__dirname, isCompiledUnderBuild ? '../../dist' : '../dist')
     app.use(express.static(distPath))
     app.get('*', (_req, res) => {
       res.sendFile(resolve(distPath, 'index.html'))

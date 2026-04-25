@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { ChevronDownIcon, ChevronRightIcon, Cross2Icon } from '@radix-ui/react-icons'
 import type { RootInfo, ProjectInfo } from '../../types.js'
 import { ProjectNode } from './ProjectNode.js'
 import * as api from '../../api.js'
@@ -42,18 +43,22 @@ export function RootNode({
       .finally(() => setLoading(false))
   }, [expanded, root.id, refreshTrigger])
 
-  // Sort: pinned first, then alphabetical
+  // Sort: pinned first, then by most recent activity (server already sorted by activity)
   const sortedProjects = [...projects].sort((a, b) => {
     const aPinned = isPinned(a.id) ? 0 : 1
     const bPinned = isPinned(b.id) ? 0 : 1
     if (aPinned !== bPinned) return aPinned - bPinned
+    // Both same pin status: sort by lastActivity desc (server order)
+    if (a.lastActivity && b.lastActivity) return b.lastActivity.localeCompare(a.lastActivity)
+    if (a.lastActivity) return -1
+    if (b.lastActivity) return 1
     return a.displayName.localeCompare(b.displayName)
   })
 
   return (
     <div className="root-node">
       <div className="root-header" onClick={() => setExpanded(!expanded)}>
-        <span className="expand-icon">{expanded ? '\u25BC' : '\u25B6'}</span>
+        <span className="expand-icon">{expanded ? <ChevronDownIcon width={10} height={10} /> : <ChevronRightIcon width={10} height={10} />}</span>
         <span className="root-label">{root.label}</span>
         <span className="root-path" title={root.path}>{root.path}</span>
         <button
@@ -61,7 +66,7 @@ export function RootNode({
           onClick={(e) => { e.stopPropagation(); onRemoveRoot() }}
           title="Remove root"
         >
-          &times;
+          <Cross2Icon width={10} height={10} />
         </button>
       </div>
       {expanded && (

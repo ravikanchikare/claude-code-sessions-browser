@@ -103,12 +103,3 @@ export async function branchSession(rootId: string, projectId: string, sessionId
   return res.json() as Promise<{ newSessionId: string; title: string }>
 }
 
-export async function exportSessions(rootId: string, projectId?: string, sessionIds?: string[], format: 'markdown' | 'json' = 'markdown'): Promise<Blob> {
-  const res = await fetch(`${BASE}/export`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rootId, projectId, sessionIds, format }),
-  })
-  if (!res.ok) throw new Error('Export failed')
-  return res.blob()
-}

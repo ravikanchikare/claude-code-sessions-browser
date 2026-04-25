@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { ChatBubbleIcon } from '@radix-ui/react-icons'
 import type { RootInfo } from '../../types.js'
 import { RootNode } from './RootNode.js'
 
@@ -48,7 +49,7 @@ export function Sidebar({
   return (
     <aside className="sidebar" style={style}>
       <div className="sidebar-header">
-        <h2>Sessions</h2>
+        <h2><span className="sidebar-icon"><ChatBubbleIcon width={16} height={16} /></span> Sessions</h2>
         <div className="sidebar-actions">
           <button
             className={`compare-mode-btn ${compareMode ? 'active' : ''}`}

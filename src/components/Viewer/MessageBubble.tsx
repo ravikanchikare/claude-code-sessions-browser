@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 import type { NormalizedMessage } from '../../types.js'
 
 interface MessageBubbleProps {
@@ -58,19 +59,18 @@ function isAgentToolCall(tc: { name: string; input: Record<string, unknown> }): 
   return (tc.name === 'Task' || tc.name === 'Agent') && typeof tc.input.subagent_type === 'string'
 }
 
-const TRUNCATION_CHARS = 600
-const TRUNCATION_LINES = 15
 
-function shouldTruncate(content: string): boolean {
-  if (content.length > TRUNCATION_CHARS) return true
-  const newlines = content.split('\n').length
-  return newlines > TRUNCATION_LINES
+const PREVIEW_LENGTH = 100
+
+function contentPreview(text: string): string {
+  const first = text.trimStart().replace(/\n/g, ' ')
+  return first.length > PREVIEW_LENGTH ? first.slice(0, PREVIEW_LENGTH) + '…' : first
 }
 
 export function MessageBubble({ message, onNavigateAgent, onAgentClick }: MessageBubbleProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const [showThinking, setShowThinking] = useState(false)
   const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set())
-  const [contentExpanded, setContentExpanded] = useState(false)
 
   if (message.type === 'system') {
     return (
@@ -82,11 +82,16 @@ export function MessageBubble({ message, onNavigateAgent, onAgentClick }: Messag
 
   if (message.type === 'summary') {
     return (
-      <div className="message message-summary">
-        <div className="message-header">
-          <span className="message-role">Summary</span>
+      <div className="message message-summary" onClick={() => setIsExpanded(!isExpanded)}>
+        <div className="message-compact-row">
+          <span className="role-badge role-summary">Summary</span>
+          {!isExpanded && <span className="message-preview">{contentPreview(message.content)}</span>}
         </div>
-        <div className="message-body">{message.content}</div>
+        {isExpanded && (
+          <div className="message-expanded" onClick={e => e.stopPropagation()}>
+            <div className="message-body">{message.content}</div>
+          </div>
+        )}
       </div>
     )
   }
@@ -94,6 +99,7 @@ export function MessageBubble({ message, onNavigateAgent, onAgentClick }: Messag
   const isUser = message.type === 'user'
   const roleClass = isUser ? 'message-user' : 'message-assistant'
   const roleLabel = isUser ? 'User' : 'Assistant'
+  const roleBadgeClass = isUser ? 'role-user' : 'role-assistant'
 
   const toggleTool = (idx: number) => {
     setExpandedTools(prev => {
@@ -107,11 +113,13 @@ export function MessageBubble({ message, onNavigateAgent, onAgentClick }: Messag
   // Separate agent calls from regular tool calls
   const agentCalls = message.toolCalls?.filter(isAgentToolCall) ?? []
   const regularCalls = message.toolCalls?.filter(tc => !isAgentToolCall(tc)) ?? []
+  const hasExtra = !!(message.thinkingContent || agentCalls.length || regularCalls.length)
+  const preview = contentPreview(message.content)
 
   return (
-    <div className={`message ${roleClass}`}>
-      <div className="message-header">
-        <span className="message-role">{roleLabel}</span>
+    <div className={`message ${roleClass}`} onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="message-compact-row">
+        <span className={`role-badge ${roleBadgeClass}`}>{roleLabel}</span>
         {message.timestamp && <span className="message-time">{formatTime(message.timestamp)}</span>}
         {message.model && <span className="message-model">{message.model.replace('claude-', '').replace(/-\d{8}$/, '')}</span>}
         {message.tokenUsage && (
@@ -119,70 +127,69 @@ export function MessageBubble({ message, onNavigateAgent, onAgentClick }: Messag
             {(message.tokenUsage.inputTokens ?? 0).toLocaleString()}in / {(message.tokenUsage.outputTokens ?? 0).toLocaleString()}out
           </span>
         )}
+        {!isExpanded && message.content.trim() && <span className="message-preview">{preview}</span>}
+        {!isExpanded && !message.content.trim() && hasExtra && <span className="message-preview">[tools]</span>}
       </div>
-      {message.content.trim() && (() => {
-        const truncatable = shouldTruncate(message.content)
-        const isTruncated = truncatable && !contentExpanded
-        return (
-          <div
-            className={`message-body ${isTruncated ? 'message-body-truncated' : ''} ${truncatable ? 'message-body-clickable' : ''}`}
-            onClick={truncatable ? () => setContentExpanded(!contentExpanded) : undefined}
-          >
-            <pre className="message-text">{message.content}</pre>
-          </div>
-        )
-      })()}
-      {message.thinkingContent && (
-        <div className="message-extra">
-          <button className="toggle-btn" onClick={() => setShowThinking(!showThinking)}>
-            {showThinking ? '\u25BC Thinking' : '\u25B6 Thinking'}
-          </button>
-          {showThinking && <pre className="thinking-content">{message.thinkingContent}</pre>}
-        </div>
-      )}
-      {agentCalls.map((tc, i) => {
-        const desc = tc.input.description as string ?? tc.input.subagent_type as string ?? 'Sub-agent'
-        const agentType = tc.input.subagent_type as string
-        const prompt = tc.input.prompt as string | undefined
-        const globalIdx = message.toolCalls!.indexOf(tc)
-        const isExpanded = expandedTools.has(globalIdx)
-        return (
-          <div
-            key={`agent-${i}`}
-            className={`agent-prompt-inline ${onAgentClick ? 'agent-prompt-clickable' : ''}`}
-            onClick={onAgentClick ? () => onAgentClick(desc) : undefined}
-          >
-            <div className="agent-prompt-header">
-              <span className="agent-type-badge">{agentType}</span>
-              <span className="agent-desc">{desc}</span>
+      {isExpanded && (
+        <div className="message-expanded" onClick={e => e.stopPropagation()}>
+          {message.content.trim() && (
+            <div className="message-body">
+              <pre className="message-text">{message.content}</pre>
             </div>
-            {prompt && <pre className="agent-prompt-text">{prompt}</pre>}
-            <button className="toggle-btn toggle-btn-small" onClick={() => toggleTool(globalIdx)}>
-              {isExpanded ? '\u25BC' : '\u25B6'} Full input
-            </button>
-            {isExpanded && <pre className="tool-input">{JSON.stringify(tc.input, null, 2)}</pre>}
-          </div>
-        )
-      })}
-      {regularCalls.length > 0 && (
-        <div className="message-extra">
-          <div className="tool-calls-inline">
-            {regularCalls.map((tc, i) => {
-              const globalIdx = message.toolCalls!.indexOf(tc)
-              const isExpanded = expandedTools.has(globalIdx)
-              const summary = toolSummary(tc)
-              return (
-                <div key={i} className="tool-call-item">
-                  <button className="toggle-btn" onClick={() => toggleTool(globalIdx)}>
-                    {isExpanded ? '\u25BC' : '\u25B6'}{' '}
-                    <span className="tool-name-label">{tc.name}</span>
-                    {summary && <span className="tool-summary">{summary}</span>}
-                  </button>
-                  {isExpanded && <pre className="tool-input">{JSON.stringify(tc.input, null, 2)}</pre>}
+          )}
+          {message.thinkingContent && (
+            <div className="message-extra">
+              <button className="toggle-btn" onClick={() => setShowThinking(!showThinking)}>
+                {showThinking ? <><ChevronDownIcon width={11} height={11} /> Thinking</> : <><ChevronRightIcon width={11} height={11} /> Thinking</>}
+              </button>
+              {showThinking && <pre className="thinking-content">{message.thinkingContent}</pre>}
+            </div>
+          )}
+          {agentCalls.map((tc, i) => {
+            const desc = tc.input.description as string ?? tc.input.subagent_type as string ?? 'Sub-agent'
+            const agentType = tc.input.subagent_type as string
+            const prompt = tc.input.prompt as string | undefined
+            const globalIdx = message.toolCalls!.indexOf(tc)
+            const isToolExpanded = expandedTools.has(globalIdx)
+            return (
+              <div
+                key={`agent-${i}`}
+                className={`agent-prompt-inline ${onAgentClick ? 'agent-prompt-clickable' : ''}`}
+                onClick={onAgentClick ? () => onAgentClick(desc) : undefined}
+              >
+                <div className="agent-prompt-header">
+                  <span className="agent-type-badge">{agentType}</span>
+                  <span className="agent-desc">{desc}</span>
                 </div>
-              )
-            })}
-          </div>
+                {prompt && <pre className="agent-prompt-text">{prompt}</pre>}
+                <button className="toggle-btn toggle-btn-small" onClick={() => toggleTool(globalIdx)}>
+                  {isToolExpanded ? <ChevronDownIcon width={11} height={11} /> : <ChevronRightIcon width={11} height={11} />} Full input
+                </button>
+                {isToolExpanded && <pre className="tool-input">{JSON.stringify(tc.input, null, 2)}</pre>}
+              </div>
+            )
+          })}
+          {regularCalls.length > 0 && (
+            <div className="message-extra">
+              <div className="tool-calls-inline">
+                {regularCalls.map((tc, i) => {
+                  const globalIdx = message.toolCalls!.indexOf(tc)
+                  const isToolExpanded = expandedTools.has(globalIdx)
+                  const summary = toolSummary(tc)
+                  return (
+                    <div key={i} className="tool-call-item">
+                      <button className="toggle-btn" onClick={() => toggleTool(globalIdx)}>
+                        {isToolExpanded ? <ChevronDownIcon width={11} height={11} /> : <ChevronRightIcon width={11} height={11} />}{' '}
+                        <span className="tool-name-label">{tc.name}</span>
+                        {summary && <span className="tool-summary">{summary}</span>}
+                      </button>
+                      {isToolExpanded && <pre className="tool-input">{JSON.stringify(tc.input, null, 2)}</pre>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
