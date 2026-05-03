@@ -1,11 +1,10 @@
 {
-  "name": "claude-code-session-viewer",
+  "name": "cc-session-viewer",
   "version": "0.1.0",
   "description": "Browse, compare, and copy transcripts of Claude Code conversation logs",
   "type": "module",
   "bin": {
-    "claude-code-session-viewer": "build/bin/cli.js",
-    "cc-sessions": "build/bin/cli.js"
+    "cc-session-viewer": "build/bin/cli.js"
   },
   "scripts": {
     "dev": "tsx bin/cli.ts",

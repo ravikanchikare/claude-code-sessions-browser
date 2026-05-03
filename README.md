@@ -7,16 +7,16 @@ Browse, compare, and copy transcripts of Claude Code conversation logs across mu
 Run instantly without installing:
 
 ```bash
-npx claude-code-session-viewer
+npx cc-session-viewer
 ```
 
 **Or install globally for the best experience!**
-Installing globally maps the short command `cc-sessions` so you can use it anywhere:
+Installing globally maps the short command `cc-session-viewer` so you can use it anywhere:
 
 ```bash
-npm install -g claude-code-session-viewer
+npm install -g cc-session-viewer
 
-cc-sessions
+cc-session-viewer
 ```
 
 This launches the app at `http://localhost:3333`. It auto-detects `~/.claude` as the default root—no arguments needed.
