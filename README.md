@@ -4,13 +4,22 @@ Browse, compare, and copy transcripts of Claude Code conversation logs across mu
 
 ## Quick Start
 
+Run instantly without installing:
+
 ```bash
-npm install
-npm run build
-npm start
+npx claude-code-session-viewer
 ```
 
-This builds the frontend and server, then launches the app at `http://localhost:3333`. It auto-detects `~/.claude` as the default root—no arguments needed.
+**Or install globally for the best experience!**
+Installing globally maps the short command `cc-sessions` so you can use it anywhere:
+
+```bash
+npm install -g claude-code-session-viewer
+
+cc-sessions
+```
+
+This launches the app at `http://localhost:3333`. It auto-detects `~/.claude` as the default root—no arguments needed.
 
 ## Development
 
