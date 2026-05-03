@@ -11,3 +11,4 @@
 - Local dev: `npm run dev` in this repo; the app is typically available at `http://localhost:3333`.
 - When serving the built Vite UI, `dist` must resolve to this package’s `dist/`: from `server/` (e.g. `tsx`) use one `..` to `dist`; from `build/server` use `../..` to `dist` (mis-resolution can point at a parent monorepo folder).
 - `scripts/export-project-sessions-md.ts` is a standalone path for exporting project sessions to a user-chosen directory, producing lean JSON and simple `.md` from message content.
+- Token counts for exported `exported-md` markdown: `npm run count-tokens` (installs tiktoken in `scripts/.venv` on first run); `scripts/count-exported-md-tokens.py` implements grouping and output formats.

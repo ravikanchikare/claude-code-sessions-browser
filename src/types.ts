@@ -62,6 +62,13 @@ export interface NormalizedMessage {
 
 export interface ParsedConversation {
   sessionId: string
+  /** Absolute path to the session JSONL file. */
+  filePath?: string
+  /** Shorter path for UI (e.g. ~/.claude/projects/...). */
+  filePathDisplay?: string
+  /** Absolute path to `.../projects/{project-directory}`. */
+  projectPath?: string
+  projectPathDisplay?: string
   customTitle: string | null
   summary: string | null
   messages: NormalizedMessage[]

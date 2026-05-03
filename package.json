@@ -4,7 +4,8 @@
   "description": "Browse, compare, and copy transcripts of Claude Code conversation logs",
   "type": "module",
   "bin": {
-    "claude-session-browser": "./build/bin/cli.js"
+    "claude-session-browser": "./build/bin/cli.js",
+    "ccs": "./build/bin/cli.js"
   },
   "scripts": {
     "dev": "tsx bin/cli.ts",

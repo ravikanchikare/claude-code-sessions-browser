@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { basename, normalize, sep } from 'node:path'
+import { homedir } from 'node:os'
 import { parseRecord, type ParsedRecord, type UserRecord, type AssistantRecord } from './schemas.js'
 
 // ---------------------------------------------------------------------------
@@ -34,8 +35,37 @@ export interface NormalizedMessage {
   attachments?: Attachment[]
 }
 
+function toDisplayPath(absPath: string): string {
+  const home = homedir()
+  if (!home) return absPath
+  if (absPath === home) return '~'
+  const prefix = home.endsWith(sep) ? home : home + sep
+  if (absPath.startsWith(prefix)) return '~' + absPath.slice(home.length)
+  if (process.platform === 'win32') {
+    const h = home.toLowerCase()
+    const p = absPath.toLowerCase()
+    const pre = h.endsWith(sep) ? h : h + sep
+    if (p.startsWith(pre)) return '~' + absPath.slice(home.length)
+  }
+  return absPath
+}
+
+/** `.../.claude/projects/{project-directory}` from a session JSONL path (including nested subagent paths). */
+function projectDirFromSessionFilePath(absPath: string): string | null {
+  const norm = normalize(absPath)
+  const parts = norm.split(sep)
+  const idx = parts.findIndex(p => p.toLowerCase() === 'projects')
+  if (idx < 0 || idx + 1 >= parts.length) return null
+  return parts.slice(0, idx + 2).join(sep)
+}
+
 export interface ParsedConversation {
   sessionId: string
+  filePath: string
+  filePathDisplay: string
+  /** Absolute path to the Claude `projects/{id}` directory for this session. */
+  projectPath: string
+  projectPathDisplay: string
   customTitle: string | null
   summary: string | null
   messages: NormalizedMessage[]
@@ -262,8 +292,14 @@ export async function parseConversation(filePath: string): Promise<ParsedConvers
     }
   }
 
+  const projectPath = projectDirFromSessionFilePath(filePath) ?? ''
+
   return {
-    sessionId: filePath.split('/').pop()?.replace('.jsonl', '') ?? '',
+    sessionId: basename(filePath, '.jsonl'),
+    filePath,
+    filePathDisplay: toDisplayPath(filePath),
+    projectPath,
+    projectPathDisplay: projectPath ? toDisplayPath(projectPath) : '',
     customTitle,
     summary: summaryText,
     messages,

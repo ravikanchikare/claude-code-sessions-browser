@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Pencil1Icon, ClipboardIcon, Cross2Icon } from '@radix-ui/react-icons'
+import { Pencil1Icon, ClipboardIcon, Cross2Icon, CheckIcon } from '@radix-ui/react-icons'
 import type { ParsedConversation, NormalizedMessage, SessionInfo } from '../../types.js'
 import { formatTurnPairCopy, formatFullSessionTranscript, filterMessagesForTranscript } from '../../lib/turnPairCopy.js'
 import { TurnRow } from './TurnRow.js'
@@ -147,23 +147,77 @@ function EditableTitle({ title, onRename, editTrigger }: { title: string; onRena
   )
 }
 
-function ResumeCmd({ sessionId }: { sessionId: string }) {
-  const [copied, setCopied] = useState(false)
-  const cmd = `claude -r ${sessionId}`
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(cmd)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [cmd])
+function SessionHeaderInfo({ sessionId, filePath, filePathDisplay, projectPath, projectPathDisplay }: {
+  sessionId: string
+  filePath?: string
+  filePathDisplay?: string
+  projectPath?: string
+  projectPathDisplay?: string
+}) {
+  const [copied, setCopied] = useState<'id' | 'path' | 'project' | null>(null)
+
+  const copyId = useCallback(() => {
+    void navigator.clipboard.writeText(sessionId)
+    setCopied('id')
+    setTimeout(() => setCopied(null), 2000)
+  }, [sessionId])
+
+  const copyPath = useCallback(() => {
+    if (!filePath) return
+    void navigator.clipboard.writeText(filePath)
+    setCopied('path')
+    setTimeout(() => setCopied(null), 2000)
+  }, [filePath])
+
+  const copyProject = useCallback(() => {
+    if (!projectPath) return
+    void navigator.clipboard.writeText(projectPath)
+    setCopied('project')
+    setTimeout(() => setCopied(null), 2000)
+  }, [projectPath])
 
   return (
-    <div
-      className={`resume-cmd ${copied ? 'resume-cmd-copied' : ''}`}
-      onClick={handleCopy}
-      title="Click to copy resume command"
-    >
-      {copied ? 'Copied!' : cmd}
-      {!copied && <span className="copy-icon"><ClipboardIcon width={13} height={13} /></span>}
+    <div className="viewer-header-session-info">
+      <div className="viewer-session-id-row">
+        <code className="viewer-session-id" title={sessionId}>{sessionId}</code>
+        <button
+          type="button"
+          className="viewer-icon-btn viewer-session-copy-btn"
+          onClick={copyId}
+          aria-label="Copy session ID"
+          title="Copy session ID"
+        >
+          {copied === 'id' ? <CheckIcon width={14} height={14} /> : <ClipboardIcon width={14} height={14} />}
+        </button>
+      </div>
+      {projectPath && projectPathDisplay && (
+        <div className="viewer-session-path-row viewer-session-project-row">
+          <code className="viewer-session-path" title={projectPath}>{projectPathDisplay}</code>
+          <button
+            type="button"
+            className="viewer-icon-btn viewer-session-copy-btn"
+            onClick={copyProject}
+            aria-label="Copy Claude project directory path"
+            title="Copy Claude project directory (~/.claude/projects/…)"
+          >
+            {copied === 'project' ? <CheckIcon width={14} height={14} /> : <ClipboardIcon width={14} height={14} />}
+          </button>
+        </div>
+      )}
+      {filePath && filePathDisplay && (
+        <div className="viewer-session-path-row">
+          <code className="viewer-session-path" title={filePath}>{filePathDisplay}</code>
+          <button
+            type="button"
+            className="viewer-icon-btn viewer-session-copy-btn"
+            onClick={copyPath}
+            aria-label="Copy session file path"
+            title="Copy full session file path"
+          >
+            {copied === 'path' ? <CheckIcon width={14} height={14} /> : <ClipboardIcon width={14} height={14} />}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -266,7 +320,6 @@ export function ConversationViewer({
         <div className="viewer-header-top">
           <EditableTitle title={title} onRename={onRename} editTrigger={renameRequested} />
           <div className="viewer-header-actions">
-            <ResumeCmd sessionId={conversation.sessionId} />
             <button
               type="button"
               className="viewer-icon-btn"
@@ -278,6 +331,13 @@ export function ConversationViewer({
             </button>
           </div>
         </div>
+        <SessionHeaderInfo
+          sessionId={conversation.sessionId}
+          filePath={conversation.filePath}
+          filePathDisplay={conversation.filePathDisplay}
+          projectPath={conversation.projectPath}
+          projectPathDisplay={conversation.projectPathDisplay}
+        />
         <div className="viewer-meta">
           <div className="viewer-meta-left">
             <Badge label="Model" value={metadata.model?.replace('claude-', '').replace(/-\d{8}$/, '')} className="badge-model" />

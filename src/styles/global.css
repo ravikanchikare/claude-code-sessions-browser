@@ -59,7 +59,7 @@
 html, body {
   height: 100%;
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);
   background: var(--bg-primary);
@@ -148,7 +148,7 @@ body.resizing {
 }
 
 .sidebar-icon {
-  font-size: 13px;
+  font-size: 14px;
   opacity: 0.7;
   display: inline-flex;
   align-items: center;
@@ -164,7 +164,7 @@ body.resizing {
   border-radius: var(--radius-sm);
   background: var(--bg-tertiary);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -200,7 +200,7 @@ body.resizing {
   padding: 4px 10px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .add-root-form button:hover {
@@ -209,7 +209,7 @@ body.resizing {
 
 .compare-info {
   padding: 6px 16px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-accent);
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
@@ -242,13 +242,13 @@ body.resizing {
 .root-label {
   font-weight: 600;
   color: var(--text-bright);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .root-path {
   flex: 1;
   min-width: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -306,11 +306,11 @@ body.resizing {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .session-count {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   background: var(--bg-tertiary);
   padding: 1px 6px;
@@ -327,7 +327,7 @@ body.resizing {
 }
 
 .pin-btn {
-  font-size: 12px;
+  font-size: 13px;
   width: 18px;
   color: var(--text-muted);
   flex-shrink: 0;
@@ -453,7 +453,7 @@ body.resizing {
   align-items: center;
   gap: 8px;
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-primary);
   cursor: pointer;
   width: 100%;
@@ -470,7 +470,7 @@ body.resizing {
 }
 
 .context-menu-icon {
-  font-size: 12px;
+  font-size: 13px;
   width: 16px;
   text-align: center;
   flex-shrink: 0;
@@ -486,7 +486,7 @@ body.resizing {
 }
 
 .session-title {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--text-primary);
   overflow: hidden;
@@ -599,7 +599,7 @@ body.resizing {
 /* Status */
 .loading-text, .empty-text, .empty-state {
   padding: 12px 16px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
@@ -658,7 +658,7 @@ body.resizing {
 }
 
 .subagent-panel-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-accent);
   overflow: hidden;
@@ -741,7 +741,7 @@ body.resizing {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -759,7 +759,7 @@ body.resizing {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -855,7 +855,7 @@ body.resizing {
 
 .turn-preview {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -995,7 +995,7 @@ body.resizing {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -1029,7 +1029,7 @@ body.resizing {
   padding: 3px 4px;
   cursor: pointer;
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: 12px;
   border-radius: var(--radius-sm);
   user-select: none;
 }
@@ -1056,7 +1056,7 @@ body.resizing {
 }
 
 .turn-orphan-text {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 
@@ -1066,7 +1066,7 @@ body.resizing {
 
 .jt {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.55;
   color: var(--text-primary);
   padding: 4px 0;
@@ -1179,46 +1179,44 @@ body.resizing {
   font-style: italic;
 }
 
-/* Resume command display */
-.resume-cmd {
+/* Session ID + file path (under viewer title) */
+.viewer-header-session-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 8px;
+}
+
+.viewer-session-id-row,
+.viewer-session-path-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
+  min-width: 0;
+}
+
+.viewer-session-path-row {
+  flex: 1;
+}
+
+.viewer-session-id,
+.viewer-session-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-muted);
-  background: var(--bg-primary);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-  max-width: 340px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.resume-cmd:hover {
-  border-color: var(--text-accent);
-  color: var(--text-primary);
+.viewer-session-path {
+  flex: 1;
+  min-width: 0;
 }
 
-.resume-cmd .copy-icon {
-  opacity: 0;
-  transition: opacity 0.15s;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.resume-cmd:hover .copy-icon {
-  opacity: 1;
-}
-
-.resume-cmd-copied {
-  color: var(--accent);
-  border-color: var(--accent);
+.viewer-session-copy-btn {
+  flex-shrink: 0;
 }
 
 .control-bar-action-btn {
@@ -1227,7 +1225,7 @@ body.resizing {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -1238,7 +1236,7 @@ body.resizing {
 
 /* Pencil icon for rename */
 .title-edit-icon {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   opacity: 0;
   cursor: pointer;
@@ -1289,7 +1287,7 @@ body.resizing {
 }
 
 .date-group-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -1367,7 +1365,7 @@ body.resizing {
 
 .checkpoint-summary {
   flex: 1;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -1453,7 +1451,7 @@ body.resizing {
 }
 
 .system-text {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 
@@ -1507,13 +1505,13 @@ body.resizing {
 
 .message-time {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .message-model {
   color: var(--text-accent);
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -1526,7 +1524,7 @@ body.resizing {
 
 .message-preview {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1546,7 +1544,7 @@ body.resizing {
 
 .message-text {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1559,7 +1557,7 @@ body.resizing {
 }
 
 .toggle-btn {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--text-secondary);
   padding: 2px 0;
   transition: color 0.1s;
@@ -1571,7 +1569,7 @@ body.resizing {
 
 .thinking-content {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.5;
   color: var(--text-muted);
   white-space: pre-wrap;
@@ -1597,7 +1595,7 @@ body.resizing {
 
 .tool-name {
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-accent);
 }
 
@@ -1614,7 +1612,7 @@ body.resizing {
 }
 
 .tool-agent-desc {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -1629,7 +1627,7 @@ body.resizing {
 
 .tool-input {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   white-space: pre-wrap;
   word-break: break-word;
@@ -1664,14 +1662,14 @@ body.resizing {
 }
 
 .agent-desc {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .agent-prompt-text {
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-secondary);
   white-space: pre-wrap;
@@ -1693,7 +1691,7 @@ body.resizing {
 
 .tool-summary {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .tool-calls-inline {
@@ -1727,7 +1725,7 @@ body.resizing {
 }
 
 .tool-pill {
-  font-size: 11px;
+  font-size: 12px;
   padding: 2px 8px;
   background: var(--bg-tertiary);
   border-radius: 3px;
@@ -1763,7 +1761,7 @@ body.resizing {
   padding: 2px 8px;
   background: var(--badge-bg);
   border-radius: 10px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .badge-label {
@@ -1860,7 +1858,7 @@ body.resizing {
 }
 
 .compare-column-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-bright);
   overflow: hidden;
@@ -1928,14 +1926,14 @@ body.resizing {
 }
 
 .export-scope {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 16px;
 }
 
 .export-error {
   color: var(--danger);
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 12px;
 }
 
@@ -1950,7 +1948,7 @@ body.resizing {
   border-radius: var(--radius-sm);
   background: var(--bg-active);
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   transition: opacity 0.15s;
 }
 
@@ -2013,7 +2011,7 @@ body.resizing {
 
 .move-target-item {
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
   cursor: pointer;
   border-bottom: 1px solid var(--border-light);
@@ -2035,7 +2033,7 @@ body.resizing {
 
 .loading-text,
 .empty-text {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   padding: 12px;
   text-align: center;

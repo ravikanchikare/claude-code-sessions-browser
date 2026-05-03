@@ -32,7 +32,7 @@ export async function startServer(port: number, isDev: boolean): Promise<void> {
   } else {
     // In production, serve the built Vite output.
     // tsx runs from server/ (../dist); compiled build/server/index.js needs ../../dist.
-    const isCompiledUnderBuild = /[/\\]build[/\\]server$/.test(__dirname)
+    const isCompiledUnderBuild = /[/\\]build[/\\]server[/\\]?$/.test(__dirname)
     const distPath = resolve(__dirname, isCompiledUnderBuild ? '../../dist' : '../dist')
     app.use(express.static(distPath))
     app.get('*', (_req, res) => {
