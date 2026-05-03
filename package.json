@@ -1,5 +1,5 @@
 {
-  "name": "claude-code-sessions-browser",
+  "name": "claude-code-session-viewer",
   "version": "0.1.0",
   "description": "Browse, compare, and copy transcripts of Claude Code conversation logs",
   "type": "module",
