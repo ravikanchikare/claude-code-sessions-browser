@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Browse, compare, and copy transcripts of Claude Code conversation logs",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ravikanchikare/cc-session-viewer.git"
+  },
   "bin": {
     "cc-session-viewer": "build/bin/cli.js"
   },

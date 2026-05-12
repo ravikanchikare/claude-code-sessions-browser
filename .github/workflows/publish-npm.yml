@@ -1,0 +1,63 @@
+# .github/workflows/publish-npm.yml
+
+name: Publish npm package
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Build package
+        run: npm run build --if-present
+
+      - name: Bump version if needed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "cc-session-viewer@$VERSION" version &>/dev/null; then
+            echo "Version $VERSION already published, bumping patch..."
+            npm version patch -m "chore: bump version to %s [skip ci]"
+            echo "BUMPED=true" >> "$GITHUB_ENV"
+          else
+            echo "Version $VERSION not yet published, proceeding."
+          fi
+
+      - name: Publish to npm
+        run: |
+          for i in 1 2 3; do
+            npx -y npm@11 publish --provenance && exit 0
+            echo "Publish attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          exit 1
+
+      - name: Push version bump
+        if: env.BUMPED == 'true'
+        run: git push origin main --follow-tags
